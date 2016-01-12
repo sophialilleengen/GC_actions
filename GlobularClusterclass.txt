@@ -1,3 +1,89 @@
-class GlobularCluster:
-	def __init__(self,filename,bhmass): #filename of object containing interpolation of density profile
-		self.s=
+class GCorbit:
+	def __init__(self,R,rho,bhmass): #filename of object containing interpolation of density profile
+		self.r=R
+		self.rho=rho
+		self.s=interpolate.InterpolatedUnivariateSpline(np.log(self.r[:]),np.log(self.rho[:]))
+		pot_y=self.potential(r,density,low=0.003,high=104.64,x_i=None,w_i=None,full_integration=True)
+		self.pot=interpolate.InterpolatedUnivariateSpline(self.r,pot_y)
+
+	def potential(r,density,low=0.003,high=104.64,x_i=None,w_i=None,full_integration=False):
+		if True:
+				sum1=np.zeros(n)
+   				sum2=np.zeros(n)
+				if isinstance(r,np.ndarray):
+        				return np.array([potential(rr,density,low=low,high=high,x_i=x_i,w_i=w_i) for rr in r])
+    				else:
+        				if r<low or r>high:
+            					sys.exit("r is smaller or bigger than star boundaries")
+        				x1=((r-low)/2)*x_i+(r+low)/2
+        				x2=((high-r)/2)*x_i+(high+r)/2
+        				for i in range(n):
+            					s1=density(x1[i])
+            					s2=density(x2[i])
+            					sum1[i]=(w_i[i]*x1[i]**2*s1)
+            					sum2[i]=(w_i[i]*x2[i]*s2)
+        				sum_1=np.sum(sum1)
+        				sum_2=np.sum(sum2)
+        				return -4*np.pi*G*((r-low)/(2*r)*sum_1+(high-r)/2*sum_2)
+		else:
+			return self.pot(r,density,low=0.003,high=104.64,x_i=None,w_i=None)
+    
+	def potential_bh(r,bhmass):
+		return -G*bhmass/r
+
+#addiere sternen- und bh-potential vor interpolation?
+
+	def r_derivative(potential):
+		return potential.derivative
+
+	def force(r,potential):
+		force=np.array(3)
+		r=np.sqrt(x**2+y**2+z**2)
+		drdx=x/r
+		drdy=y/r
+		drdz=z/r
+		force[0]=r_derivative(potential)*drdx
+		force[1]=r_derivative(potential)*drdy
+		force[2]=r_derivative(potential)*drdz
+		return force
+
+
+	def actions:
+		rl=np.sqrt(xl**2+yl**2+zl**2)
+
+		#angular moments without mass
+		Lx=yl*vzl-zl*vyl
+		Ly=zl*vxl-xl*vzl
+		Lz=xl*vyl-yl*vxl
+
+		L=np.sqrt(Lx**2+Ly**2+Lz**2)
+
+		phipot=potential(rl)
+
+		E=vxl**2./2.+vyl**2./2.+vzl**2./2.+phipot
+
+
+
+
+		def periapocenter(r):
+    			pot=potential(r)
+    			return (1/r)**2.+2.*(pot-E[0])/L[0]**2.
+
+		rmin=opt.fsolve(periapocenter,np.min(rl)) #nicht min(rl) sondern einfach kleienr wert weil ich es erst durch orbit integration weiss
+		rmax=opt.fsolve(periapocenter,np.max(rl))
+
+		def jrint(r,E,L):
+		    	pot=potential(r)
+		    	return np.sqrt(2.*E-2.*pot-L**2./r**2.)
+
+		J_phi=Lz
+		J_theta=L-np.abs(Lz)
+
+		J_r=np.zeros(len(J_phi))
+		for i in range(len(J_r)):
+    			J_r[i]=1/np.pi*intg.quad(jrint,rmin,rmax)[0]
+
+		#J_ri=cs.G*mges/np.sqrt(-2.*E)-1./2.*(L+np.sqrt(L**2.-4.*cs.G*mges*b))
+
+		print(rmin,rmax)
+		
