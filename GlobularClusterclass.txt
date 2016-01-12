@@ -1,3 +1,49 @@
 class GlobularCluster:
-	def __init__(self,filename,bhmass): #filename of object containing interpolation of density profile
-		self.s=
+	def __init__(self,R,rho,bhmass): #filename of object containing interpolation of density profile
+		self.r=R
+		self.rho=rho
+		self.s=interpolate.InterpolatedUnivariateSpline(np.log(self.r[:]),np.log(self.rho[:]))
+		pot_y=self.potential(r,density,low=0.003,high=104.64,x_i=None,w_i=None,full_integration=True)
+		self.pot=interpolate.InterpolatedUnivariateSpline(self.r,pot_y)
+
+	def potential(r,density,low=0.003,high=104.64,x_i=None,w_i=None,full_integration=False):
+		if True:
+				sum1=np.zeros(n)
+   				sum2=np.zeros(n)
+				if isinstance(r,np.ndarray):
+        				return np.array([potential(rr,density,low=low,high=high,x_i=x_i,w_i=w_i) for rr in r])
+    				else:
+        				if r<low or r>high:
+            					sys.exit("r is smaller or bigger than star boundaries")
+        				x1=((r-low)/2)*x_i+(r+low)/2
+        				x2=((high-r)/2)*x_i+(high+r)/2
+        				for i in range(n):
+            					s1=density(x1[i])
+            					s2=density(x2[i])
+            					sum1[i]=(w_i[i]*x1[i]**2*s1)
+            					sum2[i]=(w_i[i]*x2[i]*s2)
+        				sum_1=np.sum(sum1)
+        				sum_2=np.sum(sum2)
+        				return -4*np.pi*G*((r-low)/(2*r)*sum_1+(high-r)/2*sum_2)
+		else:
+			return self.pot(r,density,low=0.003,high=104.64,x_i=None,w_i=None)
+    
+	def potential_bh(r,bhmass):
+		return -G*bhmass/r
+
+#addiere sternen und bh potential vor interpolation?
+
+	def r_derivative(potential):
+		return potential.derivative
+
+	def force(r,potential):
+		force=np.array(3)
+		r=np.sqrt(x**2+y**2+z**2)
+		drdx=x/r
+		drdy=y/r
+		drdz=z/r
+		force[0]=r_derivative(potential)*drdx
+		force[1]=r_derivative(potential)*drdy
+		force[2]=r_derivative(potential)*drdz
+		return force
+		
