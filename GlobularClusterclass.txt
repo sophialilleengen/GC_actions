@@ -1,0 +1,3 @@
+class GlobularCluster:
+	def __init__(self,filename,bhmass): #filename of object containing interpolation of density profile
+		self.s=
