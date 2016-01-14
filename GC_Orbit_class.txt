@@ -1,3 +1,9 @@
+import numpy as np
+from scipy import interpolate
+from scipy import integrate as intg
+from scipy import optimize as opt
+
+
 class GCorbit:
 	def __init__(self,R,rho,bhmass): #filename of object containing interpolation of density profile
 		self.r=R
@@ -49,6 +55,8 @@ class GCorbit:
 
 
 	def actions:
+		actions=np.array(3)
+
 		rl=np.sqrt(xl**2+yl**2+zl**2)
 
 		#angular moments without mass
@@ -84,6 +92,11 @@ class GCorbit:
     			J_r[i]=1/np.pi*intg.quad(jrint,rmin,rmax)[0]
 
 		#J_ri=cs.G*mges/np.sqrt(-2.*E)-1./2.*(L+np.sqrt(L**2.-4.*cs.G*mges*b))
+		
+		
+		actions[0]=J_phi
+		actions[1]=J_theta
+		actions[2]=J_r
 
-		print(rmin,rmax)
+		return actions
 		
