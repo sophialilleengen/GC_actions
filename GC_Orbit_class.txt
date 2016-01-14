@@ -133,4 +133,54 @@ class GCorbit:
 		actions[2]=J_r
 
 		return actions
+
+	def angularmom(xl,yl,zl,vxl,vyl,vzl):
+    		Lx=yl*vzl-zl*vyl
+    		Ly=zl*vxl-xl*vzl
+    		Lz=xl*vyl-yl*vxl
+    		L=np.sqrt(Lx**2+Ly**2+Lz**2)
+    		return L,Lx,Ly,Lz
+
+
+	def energy(xl,yl,zl,vxl,vyl,vzl):
+    		pot=potential(xl,yl,zl,M=mges,b=b)
+    		E=vxl**2./2.+vyl**2./2.+vzl**2./2.+pot
+    		return E
+
+	def periapocenter(rl):
+	#    r=np.sqrt(xl**2+yl**2+zl**2)
+    		pot=potential(xl,yl,zl,M=mges,b=b)
+    		return (1/rl)**2.+2.*(pot-E[0])/L[0]**2.
+	
+	rl=np.sqrt(xl**2+yl**2+zl**2)
+
+	rmin=opt.fsolve(periapocenter,np.min(rl)) #nicht min(rl) sondern einfach kleiner wert weil ich es erst durch orbit integration weiss
+	rmax=opt.fsolve(periapocenter,np.max(rl))
+
+	def j_rint(xl,yl,zl,vxl,vyl,vzl,E,L,pot):
+    		r=np.sqrt(xl**2+yl**2+zl**2)
+    		pot=potential(xl,yl,tl,M=M,b=b)
+    		E=energy(vxl,vyl,vzl,pot)
+    		L=angularmom(xl,yl,zl,vxl,vyl,vzl)
+    		return np.sqrt(2.*E-2.*pot-L**2./r**2.)
+
+	def J_phi(xl,yl,vxl,vyl):
+    		Lz=xl*vyl-yl*vxl
+    		J_phi=Lz
+    		return J_phi
+    
+	def J_theta(L,Lz):
+    		L=angularmom(xl,yl,zl,vxl,vyl,vzl)[0]
+    		Lz=angularmom(xl,yl,zl,vxl,vyl,vzl)[1]
+    		J_theta=L-np.abs(Lz)
+    		return J_theta
+	
+	#j_rint=lambda r_var: np.sqrt(2.*E-2.*Phi(r_var)-L**2./r_var**2.)
+
+	def J_r():
+	#    J_r=np.zeros(len(J_phi))
+	#for i in range(len(J_r)):
+    		J_r=1/np.pi*intg.quad(j_rint,rmin,rmax)[0] #rmin,rmax,args=(E,L)
+	#J_ri=cs.G*mges/np.sqrt(-2.*E)-1./2.*(L+np.sqrt(L**2.-4.*cs.G*mges*b))
+    		return J_r
 		
