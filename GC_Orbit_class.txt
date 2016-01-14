@@ -42,7 +42,7 @@ class GCorbit:
 	def r_derivative(potential):
 		return potential.derivative
 
-	def force(r,potential):
+	def force(x,y,z,potential):
 		force=np.array(3)
 		r=np.sqrt(x**2+y**2+z**2)
 		drdx=x/r
@@ -52,9 +52,46 @@ class GCorbit:
 		force[1]=r_derivative(potential)*drdy
 		force[2]=r_derivative(potential)*drdz
 		return force
+		
+
+	def orbit(x0,y0,z0,vx0,vy0,vz0,N): #noch von force abhängig machen?
+		xl=np.zeros(N+1)
+		yl=np.zeros(N+1)
+		zl=np.zeros(N+1)
+
+		x_l=np.sqrt(xl**2+yl**2+zl**2)
+
+		vxl=np.zeros(N+1)
+		vyl=np.zeros(N+1)
+		vzl=np.zeros(N+1)
+
+		xl[0]=x0
+		yl[0]=y0
+		zl[0]=z0
+
+		vxl[0]=vx0
+		vyl[0]=vy0
+		vzl[0]=vz0
+
+		for i in range(N):
+		    	xl[0]=x0
+    			yl[0]=y0
+			zl[0]=z0
+    
+    			a=force(xl[i],yl[i],zl[i]) #hier auch noch potential rein?
+    
+    			xl[i+1]=xl[i]+vxl[i]*dt+1./2.*a[0]*dt**2
+    			yl[i+1]=yl[i]+vyl[i]*dt+1./2.*a[1]*dt**2
+    			zl[i+1]=zl[i]+vzl[i]*dt+1./2.*a[2]*dt**2
+    
+    			a_1=force(xl[i+1],yl[i+1],zl[i+1]) #und hier auch potential?
+    
+    			vxl[i+1]=vxl[i]+1./2.*(a[0]+a_1[0])*dt
+    			vyl[i+1]=vyl[i]+1./2.*(a[1]+a_1[1])*dt
+   			vzl[i+1]=vzl[i]+1./2.*(a[2]+a_1[2])*dt
 
 
-	def actions:
+	def actions(xl,yl,zl,vxl,vyl,vzl): #hier auch potential in die klammer?
 		actions=np.array(3)
 
 		rl=np.sqrt(xl**2+yl**2+zl**2)
@@ -69,9 +106,6 @@ class GCorbit:
 		phipot=potential(rl)
 
 		E=vxl**2./2.+vyl**2./2.+vzl**2./2.+phipot
-
-
-
 
 		def periapocenter(r):
     			pot=potential(r)
