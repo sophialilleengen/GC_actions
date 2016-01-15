@@ -40,7 +40,7 @@ class GCorbit:
 #addiere sternen- und bh-potential vor interpolation?
 
 	def r_derivative(self,potential):
-		return self.potential.derivative
+		return potential.derivative
 
 	def force(self,x,y,z,potential):
 		force=np.array(3)
@@ -48,9 +48,9 @@ class GCorbit:
 		drdx=x/r
 		drdy=y/r
 		drdz=z/r
-		force[0]=self.r_derivative(potential)*drdx
-		force[1]=self.r_derivative(potential)*drdy
-		force[2]=self.r_derivative(potential)*drdz
+		force[0]=r_derivative(potential)*drdx
+		force[1]=r_derivative(potential)*drdy
+		force[2]=r_derivative(potential)*drdz
 		return force
 		
 
