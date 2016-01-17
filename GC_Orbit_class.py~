@@ -22,17 +22,6 @@ class GCorbit:
         HISTORY:
            2016-01-15 - Written (Milanov, MPIA)
         """
-        #^-- 1. I would recommend adding such a header to each function. You can keep track of your changes, make it more usable for others and I believe that this format can be made into an automatic documentation as well...
-        #2. It's fine to not use a filename in the initialization. But I believe that you want to have a file with R vs. rho in it anyway (also easier for plotting). So you could for example define alternative input via keywords, something like (not exactly like):
-        #   def ___init(self,r_pc=None,rho_Msunpc3=None,bhmass_Msun=None,inputfilename=None):
-        #       if inputfilename is not None:
-        #           out = numpy.loadtxt(inputfilename)
-        #           self._r  =out[0,:]  #[pc]
-        #           self._rho=out[1,:]  #[M_sun/pc^3]
-        #       elif r is None and rho is None:
-        #           sys.exit("Error in GCorbit.__init__(): Specify input file or r and rho.")
-        #       else:
-        #           proceed with your code...
 
 		if inputfilename is not None:
 			data=np.loadtxt(inputfilename)		
@@ -41,18 +30,19 @@ class GCorbit:
 		elif r is None and rho is None:
 			sys.exit("Error in GCorbit.__init__(): Specify input file or r and rho.")
 		else:
+			self._r=r_pc	#[pc]
+			self._rho=rho_Msunpc3 	#[M_sun/pc³]
 		self.s=interpolate.InterpolatedUnivariateSpline(np.log(self.r[:]),np.log(self.rho[:]))
-		pot_y=self.potential(r,density,low=np.min(r),high=np.max(r),x_i=None,w_i=None,full_integration=True) #   #11. What units??? Write it in code as comment.
+		pot_y=self.potential(r,density,low=np.min(r),high=np.max(r),x_i=None,w_i=None,full_integration=True) #[pc²/s²]
 		self._G=un.m**3/(un.kg*un.s**2).to.(un.pc**3/(un.solMass*un.s**2), cs.G) #[pc³/M_sun*s²]
-		self._bhmass=bhmass_Msun	#M_sun
-		self._n=80
-		self._x_i=np.polynomial.legendre.leggauss(self.n)[0]        #    4. Maybe you want to calculate the xi and wi already in __init__ as well and pass them to the potential function...
+		self._bhmass=bhmass_Msun	#[M_sun]
+		self._n=30 #degree of Gauss-Legendre quadrature
+		self._x_i=np.polynomial.legendre.leggauss(self.n)[0]        
 		self._w_i=np.polynomial.legendre.leggauss(self.n)[1]
 
 
-		self.pot=interpolate.InterpolatedUnivariateSpline(self.r,pot_y) #^-- 5. Did you test if it makes sense to interpolate the potential in log-space as well?
+		self.pot=interpolate.InterpolatedUnivariateSpline(self.r,pot_y)
 
-    #35. I think you need a function def density(self,r) that calls the interpolation object self.s with np.log(r) and returns the result as np.exp(self.s(np.log(r))), or something like that
 
 	def density(self,r):
 	"""
@@ -61,11 +51,12 @@ class GCorbit:
 	PURPOSE:
 		returns density at distance r
 	INPUT:
-		self.s = interpolation of density profile
+		r = array of radius coordinates in pc (default: None)		
+#		self.s = interpolation of density profile
 	OUTPUT:
-		
+		density
 	HISTORY:
-
+		2016-01-16 - Written (Milanov, MPIA)
 	"""
 		return np.exp(self.s(np.log(r)))
 
@@ -76,13 +67,13 @@ class GCorbit:
 	PURPOSE:
 		calculates potential caused by stars in Globular cluster
 	INPUT:
-		R = array of radius coordinates in pc (default: None)
+		r = array of radius coordinates in pc (default: None)
 	OUTPUT:
-		Potential 
+		potential of the stars
 	HISTORY:
-		2016-01-15 - Written (Milanov, MPIA)
+		2015-12-03 - Written (Milanov, MPIA)
 	"""
-        #    15. density is only needed in case of full_integration. Make it a keyword as well, density=None, and test inside the if condition if it is really set.
+
 		if r<low or r>high:
             		sys.exit("r is smaller or bigger than star boundaries")
 
@@ -92,33 +83,33 @@ class GCorbit:
 			sum1=np.zeros(self.n)    
    			sum2=np.zeros(self.n)
 			if isinstance(r,np.ndarray):
-        			return np.array([potential(rr,density=density,low=low,high=high,x_i=x_i,w_i=w_i) for rr in r])
-    			else:
-        			x1=((r-low)/2.)*self._x_i+(r+low)/2.    
-        			x2=((high-r)/2)*self._x_i+(high+r)/2
-        			for i in range(n):
-            				s1=self.density(x1[i])   
-            				s2=self.density(x2[i])
-            				sum1[i]=(self._w_i[i]*x1[i]**2*s1)
-            				sum2[i]=(self._w_i[i]*x2[i]*s2)
-        			sum_1=np.sum(sum1)
-        			sum_2=np.sum(sum2)
-        			return -4*np.pi*self._G*((r-low)/(2*r)*sum_1+(high-r)/2*sum_2)   
+        		return np.array([potential(rr,density=density,low=low,high=high,x_i=x_i,w_i=w_i) for rr in r])
+    		else:
+        		x1=((r-low)/2.)*self._x_i+(r+low)/2.    
+        		x2=((high-r)/2)*self._x_i+(high+r)/2
+        		for i in range(n):
+            		s1=self.density(x1[i])   
+            		s2=self.density(x2[i])
+            		sum1[i]=(self._w_i[i]*x1[i]**2*s1)
+            		sum2[i]=(self._w_i[i]*x2[i]*s2)
+        		sum_1=np.sum(sum1)
+        		sum_2=np.sum(sum2)
+        		return -4*np.pi*self._G*((r-low)/(2*r)*sum_1+(high-r)/2*sum_2)   
 		else:
 			return self.pot(r,density)
     
 	def _potential_bh(self,r):
 	"""
 	NAME:
-
+		_potential_bh
 	PURPOSE:
-
+		calculates potential caused by central black hole
 	INPUT:
-
+		r = array of radius coordinates in pc (default: None)
 	OUTPUT:
-
+		potential of black hole
 	HISTORY:
-
+		2015-12-10 - Written (Milanov, MPIA)
 	"""
 		return -self._G*self._bhmass/r
 
@@ -126,34 +117,34 @@ class GCorbit:
 	def potential(self,r):
 	"""
 	NAME:
-
+		potential
 	PURPOSE:
 		adds star and black hole potential
 	INPUT:
-
+		r = array of radius coordinates in pc (default: None)
 	OUTPUT:
-
+		total potential in Globular cluster
 	HISTORY:
-
+		2016-01-16 - Written (Milanov, MPIA)
 	"""
 		return _potential_stars(r)+_potential_bh(r)
 	
-	def _r_derivative(self):   #17. Sorry, no idea, what you're doing in this function.
+	def _r_derivative(self,r):   #17. Sorry, no idea, what you're doing in this function.
 	"""
 	NAME:
-		
+		_r_derivative
 	PURPOSE:
 		calculates derivative of interpolated potential
 	INPUT:
-
+		r = array of radius coordinates in pc (default: None)
 	OUTPUT:
-
+		r-derivative of potential
 	HISTORY:
-
-	"""
-		return self.potential.derivative
+		2016-01-14 - Written (Milanov, MPIA)
+	"""	
+		der=self.potential.derivative()
+		return der(r)
         #20. I think having this function is good, but it should do something else. It could have a keyword explicit_derivative=False. In the __init__ function you could call this function once with explicit_derivative=True and calculate the derivative of the potential explicitly at a few points. Everywhere else you use the interpolation analogous to the potential.
-        #21. This function should have a parameter r at which you want to know the potential derivative.
 
 	def force(self,x,y,z):    
 	"""
@@ -179,7 +170,7 @@ class GCorbit:
 		return force
 		
 
-	def orbit(self,x0,y0,z0,vx0,vy0,vz0,dt=None,t_end=None):     #22. Is this the orbit integration function? I would, in addition to the initial star position, have delta_t and t_end (in useful units) as parameters. N is then calculated in the function from that.
+	def orbit(self,x0,y0,z0,vx0,vy0,vz0,dt=None,t_end=None,t_start=0):     #22. Is this the orbit integration function? I would, in addition to the initial star position, have delta_t and t_end (in useful units) as parameters. N is then calculated in the function from that.
 	"""
 	NAME:
 
@@ -192,8 +183,8 @@ class GCorbit:
 	HISTORY:
 
 	"""	
-		
-		t_start=0
+		if dt is None or t_end is none:
+			sys.exit("Error in GCorbit.orbit(): Specify dt and t_end.")
 		N=t_end/dt
 		t=np.linspace(t_start,t_end,N)
 
