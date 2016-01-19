@@ -9,7 +9,7 @@ import sys
 
 
 class GCorbit:
-	def __init__(self,r_pc=None,rho_Msunpc3=None,bhmass_Msun=None,inputfilename=None,n=None): 
+	def __init__(self,r_pc=None,x_pc=None,y_pc=None,z_pc=None,vx_pcs=None,vy_pcs=None,vz_pcs=None,rho_Msunpc3=None,bhmass_Msun=None,inputfilename=None,n=None): 
         """
         NAME:
            __init__
@@ -25,12 +25,24 @@ class GCorbit:
 
 		if inputfilename is not None:
 			data=np.loadtxt(inputfilename)		
-			self._r  = data[0,:] #[pc]
-			self._rho = data[1,:] #[M_sun/pc³]
-		elif r is None and rho is None:
-			sys.exit("Error in GCorbit.__init__(): Specify input file or r and rho.")
+			self._r  = data[0,:] 	#[pc]
+			self._x = data[1,:] 	#[pc]
+			self._y = data[2,:] 	#[pc]
+			self._z = data[3,:] 	#[pc]
+			self._vx = data[4,:] 	#[pc/s]
+			self._vy = data[5,:] 	#[pc/s]
+			self._vz = data[6,:] 	#[pc/s]
+			self._rho = data[7,:] 	#[M_sun/pc³]
+		elif r is None or x is None or y is None or z is None or vx is None or vy is None or vz is None or rho is None:
+			sys.exit("Error in GCorbit.__init__(): Specify input file or r, x, y, z, vx, vy, vz and rho.")
 		else:
-			self._r=r_pc	#[pc]
+			self._r=r_pc			#[pc]
+			self._x = x_pc 			#[pc]
+			self._y = y_pc			#[pc]
+			self._z = z_pc			#[pc]
+			self._vx = vx_pcs		#[pc/s]
+			self._vy = vy_pcs 		#[pc/s]
+			self._vz = vz_pcs 		#[pc/s]
 			self._rho=rho_Msunpc3 	#[M_sun/pc³]
 		self.s=interpolate.InterpolatedUnivariateSpline(np.log(self.r[:]),np.log(self.rho[:]))
 		pot_y=self.potential(r,density,low=np.min(r),high=np.max(r),x_i=None,w_i=None,full_integration=True) #[pc²/s²]
@@ -170,7 +182,7 @@ class GCorbit:
 		return force
 		
 
-	def orbit_integration(self,x,y,z,vx,vy,vz,dt=None,t_end=None,t_start=0):     #22. Is this the orbit integration function? I would, in addition to the initial star position, have delta_t and t_end (in useful units) as parameters. N is then calculated in the function from that.
+	def orbit_integration(self,x,y,z,vx,vy,vz,dt=None,t_end=None,t_start=0,method='leapfrog'):     #22. Is this the orbit integration function? I would, in addition to the initial star position, have delta_t and t_end (in useful units) as parameters. N is then calculated in the function from that.
 	"""
 	NAME:
 		orbit_integration
@@ -183,45 +195,48 @@ class GCorbit:
 	HISTORY:
 		
 	"""	
-		if dt is None or t_end is none:
-			sys.exit("Error in GCorbit.orbit(): Specify dt and t_end.")
-		N=t_end/dt
-		t=np.linspace(t_start,t_end,N)
+		if method == 'leapfrog':
+			if dt is None or t_end is none:
+				sys.exit("Error in GCorbit.orbit(): Specify dt and t_end.")
+			N=t_end/dt
+			t=np.linspace(t_start,t_end,N) #[s]?
 
-		xl=np.zeros(N+1)
-		yl=np.zeros(N+1)
-		zl=np.zeros(N+1)
+			xl=np.zeros(N+1)
+			yl=np.zeros(N+1)
+			zl=np.zeros(N+1)
 
-		x_l=np.sqrt(xl**2+yl**2+zl**2)
+			x_l=np.sqrt(xl**2+yl**2+zl**2)
 
-		vxl=np.zeros(N+1)
-		vyl=np.zeros(N+1)
-		vzl=np.zeros(N+1)
+			vxl=np.zeros(N+1)
+			vyl=np.zeros(N+1)
+			vzl=np.zeros(N+1)
 
-		xl[0]=x
-		yl[0]=y
-		zl[0]=z
+			xl[0]=x
+			yl[0]=y
+			zl[0]=z
 
-		vxl[0]=vx
-		vyl[0]=vy
-		vzl[0]=vz
+			vxl[0]=vx
+			vyl[0]=vy
+			vzl[0]=vz
 
-		for i in range(N):
-    		a=self.force(xl[i],yl[i],zl[i]) 
-    
-    		xl[i+1]=xl[i]+vxl[i]*dt+1./2.*a[0]*dt**2
-    		yl[i+1]=yl[i]+vyl[i]*dt+1./2.*a[1]*dt**2
-    		zl[i+1]=zl[i]+vzl[i]*dt+1./2.*a[2]*dt**2
-    
-    		a_1=self.force(xl[i+1],yl[i+1],zl[i+1]) 
-    
-    		vxl[i+1]=vxl[i]+1./2.*(a[0]+a_1[0])*dt
-    		vyl[i+1]=vyl[i]+1./2.*(a[1]+a_1[1])*dt
-   			vzl[i+1]=vzl[i]+1./2.*(a[2]+a_1[2])*dt
+			for i in range(N):
+				a=self.force(xl[i],yl[i],zl[i]) 
 		
-		return xl,yl,zl,vxl,vyl,vzl,t 
+				xl[i+1]=xl[i]+vxl[i]*dt+1./2.*a[0]*dt**2
+				yl[i+1]=yl[i]+vyl[i]*dt+1./2.*a[1]*dt**2
+				zl[i+1]=zl[i]+vzl[i]*dt+1./2.*a[2]*dt**2
+		
+				a_1=self.force(xl[i+1],yl[i+1],zl[i+1]) 
+		
+				vxl[i+1]=vxl[i]+1./2.*(a[0]+a_1[0])*dt
+				vyl[i+1]=vyl[i]+1./2.*(a[1]+a_1[1])*dt
+	   			vzl[i+1]=vzl[i]+1./2.*(a[2]+a_1[2])*dt
+		
+			return xl,yl,zl,vxl,vyl,vzl,t 
+		
+		elif method == 'rk4'
 
-    #^-- 33. Hab mir die Funktion nicht im Detail angeschaut. Gehe davon aus, dass es stimmt.
+
     #^-- 34. Da du Runge-Kutta und leapfrog implementiert hast, koenntest du ein keyword method='leapfrog' setzen, dass man auch zu 'rk4' setzen kann, wenn man moechte. Dann kannst du einfach hin und her switchen.
 
 

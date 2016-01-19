@@ -9,7 +9,7 @@ import sys
 
 
 class GCorbit:
-	def __init__(self,r_pc=None,rho_Msunpc3=None,bhmass_Msun=None,inputfilename=None,n=None): 
+	def __init__(self,r_pc=None,x_pc=None,y_pc=None,z_pc=None,vx_pcs=None,vy_pcs=None,vz_pcs=None,rho_Msunpc3=None,bhmass_Msun=None,inputfilename=None,n=None): 
         """
         NAME:
            __init__
@@ -25,12 +25,24 @@ class GCorbit:
 
 		if inputfilename is not None:
 			data=np.loadtxt(inputfilename)		
-			self._r  = data[0,:] #[pc]
-			self._rho = data[1,:] #[M_sun/pc³]
-		elif r is None and rho is None:
-			sys.exit("Error in GCorbit.__init__(): Specify input file or r and rho.")
+			self._r  = data[0,:] 	#[pc]
+			self._x = data[1,:] 	#[pc]
+			self._y = data[2,:] 	#[pc]
+			self._z = data[3,:] 	#[pc]
+			self._vx = data[4,:] 	#[pc/s]
+			self._vy = data[5,:] 	#[pc/s]
+			self._vz = data[6,:] 	#[pc/s]
+			self._rho = data[7,:] 	#[M_sun/pc³]
+		elif r is None or x is None or y is None or z is None or vx is None or vy is None or vz is None or rho is None:
+			sys.exit("Error in GCorbit.__init__(): Specify input file or r, x, y, z, vx, vy, vz and rho.")
 		else:
-			self._r=r_pc	#[pc]
+			self._r=r_pc			#[pc]
+			self._x = x_pc 			#[pc]
+			self._y = y_pc			#[pc]
+			self._z = z_pc			#[pc]
+			self._vx = vx_pcs		#[pc/s]
+			self._vy = vy_pcs 		#[pc/s]
+			self._vz = vz_pcs 		#[pc/s]
 			self._rho=rho_Msunpc3 	#[M_sun/pc³]
 		self.s=interpolate.InterpolatedUnivariateSpline(np.log(self.r[:]),np.log(self.rho[:]))
 		pot_y=self.potential(r,density,low=np.min(r),high=np.max(r),x_i=None,w_i=None,full_integration=True) #[pc²/s²]
