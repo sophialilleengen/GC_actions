@@ -33,18 +33,16 @@ class GCorbit:
         else:
             self._r_bin=r_pc        #[pc]
             self._rho=rho_Msunpc3     #[M_sun/pc³]
+        self._n=30 #degree of Gauss-Legendre quadrature
         self.s=interpolate.InterpolatedUnivariateSpline(np.log(self._r_bin[:]),np.log(self._rho[:]))
-        pot_y=self._potential_stars(self._r_bin,density=self.density(self._r_bin),full_integration=True) #[pc²/s²] #potential muss hier scheinbar vom oben definierten r abhängen, soll das so sein? demnach dann auch die Dichte
-        self._G=un.m**3/(un.kg*un.s**2).to(un.pc**3/(un.solMass*un.s**2), cs.G) #[pc³/M_sun*s²]
+        self._G=(un.m**3/(un.kg*un.s**2)).to(un.pc**3/(un.solMass*un.s**2), cs.G) #[pc³/M_sun*s²]
         if bhmass_Msun is None:
             self._bhmass=0
         else:
             self._bhmass=bhmass_Msun    #[M_sun]
-        self._n=30 #degree of Gauss-Legendre quadrature
-        self._x_i=np.polynomial.legendre.leggauss(self.n)[0]        
-        self._w_i=np.polynomial.legendre.leggauss(self.n)[1]
-
-
+        self._x_i=np.polynomial.legendre.leggauss(self._n)[0]        
+        self._w_i=np.polynomial.legendre.leggauss(self._n)[1]
+        pot_y=self._potential_stars(self._r_bin,density=self.density(self._r_bin),full_integration=True) #[pc²/s²] #potential muss hier scheinbar vom oben definierten r abhängen, soll das so sein? demnach dann auch die Dichte
         self.pot=interpolate.InterpolatedUnivariateSpline(self._r_bin,pot_y)
         return None
 
@@ -79,29 +77,30 @@ class GCorbit:
         """
         low=np.min(r)
         high=np.max(r)
-        if np.any(r<low) or np.any(r>high): #s.Z. 37 r wird als array eingegeben, also muss ich hier array befehle benutzen 
+        if np.any(r<low) or np.any(r>high): #s.Z. 45 r wird als array eingegeben, also muss ich hier array befehle benutzen 
                     sys.exit("r is smaller or bigger than star boundaries")
 
-        if full_integration==True:
-            if density is None:
-                sys.exit("Error in GCorbit._potential_stars(): Specify density.")    
-            sum1=np.zeros(self._n)    
-            sum2=np.zeros(self._n)
-            if isinstance(r,np.ndarray):
-                return np.array([potential(rr,density=density,low=low,high=high,x_i=x_i,w_i=w_i) for rr in r])
-            else:
-                x1=((r-low)/2.)*self._x_i+(r+low)/2.    
-                x2=((high-r)/2)*self._x_i+(high+r)/2
-                for i in range(n):
-                    s1=self.density(x1[i])   
-                    s2=self.density(x2[i])
-                    sum1[i]=(self._w_i[i]*x1[i]**2*s1)
-                    sum2[i]=(self._w_i[i]*x2[i]*s2)
-                sum_1=np.sum(sum1)
-                sum_2=np.sum(sum2)
-                return -4*np.pi*self._G*((r-low)/(2*r)*sum_1+(high-r)/2*sum_2)   
+        #if full_integration==True:
+        if density is None:
+            sys.exit("Error in GCorbit._potential_stars(): Specify density.")    
+        sum1=np.zeros(self._n)    
+        sum2=np.zeros(self._n)
+        if isinstance(r,np.ndarray):
+            return np.array([self._potential_stars(rr,density=density) for rr in r])
         else:
-            return self.pot(r)
+            x1=((r-low)/2.)*self._x_i+(r+low)/2.    
+            x2=((high-r)/2)*self._x_i+(high+r)/2
+            for i in range(self._n):
+                s1=self.density(x1[i])   
+                s2=self.density(x2[i])
+                sum1[i]=(self._w_i[i]*x1[i]**2*s1)
+                sum2[i]=(self._w_i[i]*x2[i]*s2)
+            sum_1=np.sum(sum1)
+            sum_2=np.sum(sum2)
+            pot_stars=-4*np.pi*self._G*((r-low)/(2*r)*sum_1+(high-r)/2*sum_2)   
+            return pot_stars
+        #else:
+        #    return self.pot(r)
     
     def _potential_bh(self,r):
         """
@@ -116,10 +115,11 @@ class GCorbit:
         HISTORY:
             2015-12-10 - Written (Milanov, MPIA)
         """
-        return -self._G*self._bhmass/r
+        pot_bh=-self._G*self._bhmass/r
+        return pot_bh
 
 
-    def potential(self,r):
+    def potential(self,r,density=None):
         """
         NAME:
             potential
@@ -132,7 +132,7 @@ class GCorbit:
         HISTORY:
             2016-01-16 - Written (Milanov, MPIA)
         """
-        return self._potential_stars(r)+self._potential_bh(r)
+        return self._potential_stars(r,density=density)+self._potential_bh(r)
     
     def _r_derivative(self,r):   
         """
@@ -263,7 +263,7 @@ class GCorbit:
         return L,Lx,Ly,Lz
 
 
-    def energy(self,x,y,z,vx,vy,vz):
+    def energy(self,x,y,z,vx,vy,vz,density=None):
         """
         NAME:
             energy
@@ -277,11 +277,11 @@ class GCorbit:
             2016-01-14 - Written (Milanov, MPIA)
         """    
         r=np.sqrt(x**2+y**2+z**2)
-        pot=self.potential(r)        #
+        pot=self.potential(r,density=density)        #
         E=vx**2./2.+vy**2./2.+vz**2./2.+pot
         return E
 
-    def _periapocenter_aux(self,r,E,L):
+    def _periapocenter_aux(self,r,E,L,density=None):
         """
         NAME:
             _periapocenter_aux
@@ -294,9 +294,9 @@ class GCorbit:
         HISTORY:
             2016-01-19 - Written (Milanov, MPIA)
         """    
-        return(1./r)**2.+2.*(self.potential(r)-E)/L**2.         
+        return(1./r)**2.+2.*(self.potential(r,density=density)-E)/L**2.         
 
-    def periapocenter(self,x,y,z,vx,vy,vz):
+    def periapocenter(self,x,y,z,vx,vy,vz,density=None):
         """
         NAME:
             periapocenter
@@ -309,11 +309,12 @@ class GCorbit:
         HISTORY:
             2016-01-16 - Written (Milanov, MPIA)
         """
+        dens=density
         r=np.sqrt(x**2.+y**2.+z**2.)
-        E=self.energy(x,y,z,vx,vy,vz)
+        E=self.energy(x,y,z,vx,vy,vz,density=density)
         L=self.angularmom(x,y,z,vx,vy,vz)[0]
-        rmin=opt.fsolve(self._periapocenter_aux,x0=np.min(self._r_bin),args=(E,L))
-        rmax=opt.fsolve(self._periapocenter_aux,x0=np.max(self._r_bin),args=(E,L))
+        rmin=opt.fsolve(self._periapocenter_aux,x0=np.min(self._r_bin),args=(E,L,dens))
+        rmax=opt.fsolve(self._periapocenter_aux,x0=np.max(self._r_bin),args=(E,L,dens))
         if rmin == rmax:
             sys.exit('Error in periapocenter(): rmin=rmax.')
         if rmin > rmax:
@@ -323,7 +324,7 @@ class GCorbit:
         return rmin,rmax    
     
 
-    def _j_rint(self,r,E,L):
+    def _j_rint(self,r,E,L,density=None):
         """
         NAME:
             _j_rint
@@ -336,7 +337,7 @@ class GCorbit:
         HISTORY:
             2015-12-04 - Written (Milanov, MPIA)
         """
-        pot=self.potential(r)
+        pot=self.potential(r,density=density)
         return np.sqrt(2.*E-2.*pot-L**2./r**2.)
     #29. j_rint ist doch die funktion die dann in J_r als integrand im Integral aufgerufen wird, oder? Das Integral ist ueber r . Das heisst, du uebergibst dieser Funktion NUR das r und ausserdem die Konstanten E und L, die du schon vorher in J_r ausgerechnet hast.
 
@@ -377,7 +378,7 @@ class GCorbit:
 
 ### J_r beim Integral unsicher wegen Argumenten f�r j_rint und wegen Apo- und Pericenter ###
 
-    def _J_r(self,x,y,z,vx,vy,vz):
+    def _J_r(self,x,y,z,vx,vy,vz,density=None):
         """
         NAME:
             _J_r
@@ -390,13 +391,14 @@ class GCorbit:
         HISTORY:
             2015-12-04 - Written (Milanov, MPIA)
         """
-        rmin,rmax=self.periapocenter(x,y,z,vx,vy,vz)           
-        E=self.energy(x,y,z,vx,vy,vz)
+        dens=density
+        rmin,rmax=self.periapocenter(x,y,z,vx,vy,vz,density=density)           
+        E=self.energy(x,y,z,vx,vy,vz,density=density)
         L=self.angularmom(x,y,z,vx,vy,vz)[0]
-        J_r=1/np.pi*intg.quad(j_rint,rmin,rmax,args=(E,L))[0] 
+        J_r=1/np.pi*intg.quad(self._j_rint,rmin,rmax,args=(E,L,dens))[0] 
         return J_r
     
-    def actions(self,x,y,z,vx,vy,vz):
+    def actions(self,x,y,z,vx,vy,vz,density=None):
         """
         NAME:
             actions
@@ -409,9 +411,9 @@ class GCorbit:
         HISTORY:
             2016-01-14 - Written (Milanov, MPIA)
         """
-        J_phi=self.J_phi(x,y,z,vx,vy,vz)
-        J_theta=self.J_theta(x,y,z,vx,vy,vz)
-        J_r=self.J_r(x,y,z,vx,vy,vz)
+        J_phi=self._J_phi(x,y,z,vx,vy,vz)
+        J_theta=self._J_theta(x,y,z,vx,vy,vz)
+        J_r=self._J_r(x,y,z,vx,vy,vz,density=density)
         return J_phi,J_theta,J_r
 
 
