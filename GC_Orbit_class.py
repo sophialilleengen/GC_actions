@@ -129,7 +129,7 @@ class GCorbit:
 	"""
 		return _potential_stars(r)+_potential_bh(r)
 	
-	def _r_derivative(self,r):   #17. Sorry, no idea, what you're doing in this function.
+	def _r_derivative(self,r):   
 	"""
 	NAME:
 		_r_derivative
@@ -164,13 +164,13 @@ class GCorbit:
 		drdx=x/r
 		drdy=y/r
 		drdz=z/r
-		force[0]=self.r_derivative(potential)*drdx  #19. Not sure, if this works...
+		force[0]=self.r_derivative(potential)*drdx 
 		force[1]=self.r_derivative(potential)*drdy
 		force[2]=self.r_derivative(potential)*drdz
 		return force
 		
 
-	def orbit_integration(self,x0,y0,z0,vx0,vy0,vz0,dt=None,t_end=None,t_start=0):     #22. Is this the orbit integration function? I would, in addition to the initial star position, have delta_t and t_end (in useful units) as parameters. N is then calculated in the function from that.
+	def orbit_integration(self,x,y,z,vx,vy,vz,dt=None,t_end=None,t_start=0):     #22. Is this the orbit integration function? I would, in addition to the initial star position, have delta_t and t_end (in useful units) as parameters. N is then calculated in the function from that.
 	"""
 	NAME:
 		orbit_integration
@@ -198,29 +198,25 @@ class GCorbit:
 		vyl=np.zeros(N+1)
 		vzl=np.zeros(N+1)
 
-		xl[0]=x0
-		yl[0]=y0
-		zl[0]=z0
+		xl[0]=x
+		yl[0]=y
+		zl[0]=z
 
-		vxl[0]=vx0
-		vyl[0]=vy0
-		vzl[0]=vz0
+		vxl[0]=vx
+		vyl[0]=vy
+		vzl[0]=vz
 
 		for i in range(N):
-		    xl[0]=x0
-    		yl[0]=y0
-			zl[0]=z0
+    		a=self.force(xl[i],yl[i],zl[i]) 
     
-    			a=self.force(xl[i],yl[i],zl[i]) #hier auch noch potential rein?
+    		xl[i+1]=xl[i]+vxl[i]*dt+1./2.*a[0]*dt**2
+    		yl[i+1]=yl[i]+vyl[i]*dt+1./2.*a[1]*dt**2
+    		zl[i+1]=zl[i]+vzl[i]*dt+1./2.*a[2]*dt**2
     
-    			xl[i+1]=xl[i]+vxl[i]*dt+1./2.*a[0]*dt**2
-    			yl[i+1]=yl[i]+vyl[i]*dt+1./2.*a[1]*dt**2
-    			zl[i+1]=zl[i]+vzl[i]*dt+1./2.*a[2]*dt**2
+    		a_1=self.force(xl[i+1],yl[i+1],zl[i+1]) 
     
-    			a_1=self.force(xl[i+1],yl[i+1],zl[i+1]) #und hier auch potential?
-    
-    			vxl[i+1]=vxl[i]+1./2.*(a[0]+a_1[0])*dt
-    			vyl[i+1]=vyl[i]+1./2.*(a[1]+a_1[1])*dt
+    		vxl[i+1]=vxl[i]+1./2.*(a[0]+a_1[0])*dt
+    		vyl[i+1]=vyl[i]+1./2.*(a[1]+a_1[1])*dt
    			vzl[i+1]=vzl[i]+1./2.*(a[2]+a_1[2])*dt
 		
 		return xl,yl,zl,vxl,vyl,vzl,t 
@@ -240,9 +236,9 @@ class GCorbit:
 	INPUT:
 		
 	OUTPUT:
-		angular 
+		L, Lx, Ly, Lz
 	HISTORY:
-
+		2016-01-14 - Written (Milanov, MPIA)
 	"""
     		Lx=y*vz-z*vy
     		Ly=z*vx-x*vz
@@ -254,59 +250,76 @@ class GCorbit:
 	def energy(self,x,y,z,vx,vy,vz):
 	"""
 	NAME:
-
+		energy
 	PURPOSE:
-
+		calculates energy of star at its actual position
 	INPUT:
 
 	OUTPUT:
-
+		energy
 	HISTORY:
-
+		2016-01-14 - Written (Milanov, MPIA)
 	"""
-    		pot=self.potential(x,y,z)		#eventuell weitere Parameter im Potential #24. Noe, ich glaub nicht...
+    		pot=self.potential(x,y,z)		#
     		E=vx**2./2.+vy**2./2.+vz**2./2.+pot
     		return E
+
+	def _periapocenter_aux(self,r_ap,x,y,z,vx,vy,vz):
+	"""
+	NAME:
+		_periapocenter_aux
+	PURPOSE:
+		gives function to solve in periapocenter
+	INPUT:
+		
+	OUTPUT:
+		
+	HISTORY:
+		2016-01-19 - Written (Milanov, MPIA)
+	"""
+    	pot=self.potential(x,y,z)		
+		E=self.energy(x,y,z,vx,vy,vz)
+		L=self.angularmom(x,y,z,vx,vy,vz)[0] 
+    	return(1/r_ap)**2.+2.*(self.potential(r_ap)-E)/L**2. 		
 
 	def periapocenter(self,r_ap,x,y,z,vx,vy,vz):
 	"""
 	NAME:
-
+		periapocenter
 	PURPOSE:
-
+		calculates pericenter and apocenter of orbit
 	INPUT:
-
+		
 	OUTPUT:
-
+		rmin as pericenter, rmax as apocenter
 	HISTORY:
-
+		2016-01-16 - Written (Milanov, MPIA)
 	"""
-	    	r=np.sqrt(x**2+y**2+z**2)
-    		pot=self.potential(x,y,z)		#eventuell weitere Parameter im Potential
-		    E=self.energy(x,y,z,vx,vy,vz)
-		    L=self.angularmom(x,y,z,vx,vy,vz)[0] 
-    		return (1/r_ap)**2.+2.*(self.potential(r_ap)-E)/L**2. 	#Potential im Apo- bzw Pericenter noch richtige Argumente/Parameter einsetzen
-            #^-- 28. Diese Funktion sollte meiner Meinung nach rmin und rmax returnen.
+	    r=np.sqrt(x**2.+y**2.+z**2.)
+
+		rmin=opt.fsolve(self._periapocenter_aux,np.min(r))
+		rmax=opt.fsolve(self._periapocenter_aux,np.max(r))
+		return rmin,rmax	#Potential im Apo- bzw Pericenter noch richtige Argumente/Parameter einsetzen
+
 	
 
 	rmin=opt.fsolve(periapocenter,np.min(r)) #nicht min(rl) sondern einfach kleiner Wert weil ich es erst durch orbit integration weiss
 	rmax=opt.fsolve(periapocenter,np.max(r))
-    #^-- 26a. Warum steht das ausserhalb einer function? 
-    #    26b.Sollte doch in perapocenter drin stehen.
+
     #27. Ich wuerde noch eine Funktion _periapocenter_aux(E,L) definieren, und die dann in periapocenter in fsolve aufrufen.
 
-	def j_rint(self,x,y,z,vx,vy,vz):
+	def _j_rint(self,x,y,z,vx,vy,vz):
 	"""
 	NAME:
-
+		_j_rint
 	PURPOSE:
-
+		calculates integral needed for J_r action
 	INPUT:
 
 	OUTPUT:
-
+		calculated integral
 	HISTORY:
-
+		2015-12-04 - Written (Milanov, MPIA)
 	"""
     		r=np.sqrt(x**2+y**2+z**2)
     		pot=self.potential(x,y,z)
@@ -315,35 +328,35 @@ class GCorbit:
     		return np.sqrt(2.*E-2.*pot-L**2./r**2.)
     #29. j_rint ist doch die funktion die dann in J_r als integrand im Integral aufgerufen wird, oder? Das Integral ist ueber r . Das heisst, du uebergibst dieser Funktion NUR das r und ausserdem die Konstanten E und L, die du schon vorher in J_r ausgerechnet hast.
 
-	def J_phi(self,x,y,z,vx,vy,vz):
+	def _J_phi(self,x,y,z,vx,vy,vz):
 	"""
 	NAME:
-
-	PURPOSE:
-
+		_J_phi
+	PURPOSE:	
+		calculates action J_phi
 	INPUT:
 
 	OUTPUT:
-
+		J_phi
 	HISTORY:
-
+		2015-11-26 - Written (Milanov, MPIA)
 	"""
     		Lz=self.angularmom(x,y,z,vx,vy,vz)[3]
     		J_phi=Lz
     		return J_phi
     
-	def J_theta(self,x,y,z,vx,vy,vz):
+	def _J_theta(self,x,y,z,vx,vy,vz):
 	"""
 	NAME:
-
+		_J_theta
 	PURPOSE:
-
+		calculates action J_theta
 	INPUT:
-
+		
 	OUTPUT:
-
+		J_theta
 	HISTORY:
-
+		2015-11-26 - Written (Milanov, MPIA)
 	"""
     		L=self.angularmom(x,y,z,vx,vy,vz)[0]
     		Lz=self.angularmom(x,y,z,vx,vy,vz)[1]
@@ -352,18 +365,18 @@ class GCorbit:
 
 ### J_r beim Integral unsicher wegen Argumenten f�r j_rint und wegen Apo- und Pericenter ###
 
-	def J_r(self,x,y,z,vx,vy,vz):
+	def _J_r(self,x,y,z,vx,vy,vz):
 	"""
 	NAME:
-
+		_J_r
 	PURPOSE:
-
+		calculates J_r action
 	INPUT:
 
 	OUTPUT:
-
+		J_r
 	HISTORY:
-
+		2015-12-04 - Written (Milanov, MPIA)
 	"""
 
 	### Peri- und Apocenter Suche noch verbessern, nicht min(rl)/max(rl) sondern irgendwie kleine bzw gro�e Werte finden abhaengig von r ###
@@ -377,15 +390,15 @@ class GCorbit:
 	def actions(self,x,y,z,vx,vy,vz):
 	"""
 	NAME:
-
+		actions
 	PURPOSE:
-
+		returns actions
 	INPUT:
 
 	OUTPUT:
-
+		actions
 	HISTORY:
-
+		2016-01-14 - Written (Milanov, MPIA)
 	"""
 		J_phi=self.J_phi(x,y,z,vx,vy,vz)
 		J_theta=self.J_theta(x,y,z,vx,vy,vz)
