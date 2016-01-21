@@ -313,10 +313,10 @@ class GCorbit:
         r=np.sqrt(x**2.+y**2.+z**2.)
         E=self.energy(x,y,z,vx,vy,vz,density=density)
         L=self.angularmom(x,y,z,vx,vy,vz)[0]
-        rmin=opt.fsolve(self._periapocenter_aux,x0=np.min(self._r_bin),args=(E,L,dens))
-        rmax=opt.fsolve(self._periapocenter_aux,x0=np.max(self._r_bin),args=(E,L,dens))
-        if rmin == rmax:
-            sys.exit('Error in periapocenter(): rmin=rmax.')
+        rmin=opt.fsolve(self._periapocenter_aux,x0=1./3.*r,args=(E,L,dens))
+        rmax=opt.fsolve(self._periapocenter_aux,x0=5./3.*r,args=(E,L,dens))
+        #if rmin == rmax:
+        #    sys.exit('Error in periapocenter(): rmin=rmax.')
         if rmin > rmax:
             r_temp=rmax
             rmax=rmin
