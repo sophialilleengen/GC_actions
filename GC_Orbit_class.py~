@@ -3,6 +3,7 @@ from scipy import interpolate
 from scipy import integrate as intg
 from scipy import optimize as opt
 from scipy import constants as cs
+from scipy.misc import derivative
 from astropy import units as un
 import sys
 
@@ -36,7 +37,7 @@ class GCorbit:
         else:
             self._r_bin=r_pc        #[pc]
             self._rho=rho_M_sunpc3     #[M_sun/pc³]
-        self._n=30 #degree of Gauss-Legendre quadrature
+        self._n=80 #degree of Gauss-Legendre quadrature
         self.s=interpolate.InterpolatedUnivariateSpline(np.log(self._r_bin[:]),np.log(self._rho[:])) #[M_sun/pc³]
         self._G=(un.m**3/(un.kg*un.s**2)).to(un.pc**3/(un.solMass*un.s**2), cs.G) #[pc³/M_sun*s²]
         if bhmass_M_sun is None:
@@ -79,8 +80,8 @@ class GCorbit:
         HISTORY:
             2015-12-03 - Written (Milanov, MPIA)
         """
-        low=np.min(r)   #[pc]
-        high=np.max(r)  #[pc]
+        low=np.min(self._r_bin)   #[pc]
+        high=np.max(self._r_bin)  #[pc]
         if np.any(r<low) or np.any(r>high): 
             sys.exit("Error in GCorbit._potential_stars(): r is smaller or bigger than star boundaries")
         if full_integration==True:
@@ -92,15 +93,15 @@ class GCorbit:
                 return np.array([self._potential_stars(rr,density=density,full_integration=full_integration) for rr in r])
             else:
                 x1=((r-low)/2.)*self._x_i+(r+low)/2.    #[pc]
-                x2=((high-r)/2)*self._x_i+(high+r)/2    #[pc]
+                x2=((high-r)/2.)*self._x_i+(high+r)/2.    #[pc]
                 for i in range(self._n):
                     s1=self.density(x1[i])  #[M_sun/pc³]
                     s2=self.density(x2[i])  #[M_sun/pc³]
-                    sum1[i]=(self._w_i[i]*x1[i]**2*s1)  #[M_sun/pc]
+                    sum1[i]=(self._w_i[i]*x1[i]**2.*s1)  #[M_sun/pc]
                     sum2[i]=(self._w_i[i]*x2[i]*s2)     #[M_sun/pc²]
                 sum_1=np.sum(sum1)
                 sum_2=np.sum(sum2)
-                pot_stars=-4*np.pi*self._G*((r-low)/(2*r)*sum_1+(high-r)/2*sum_2)   #[pc²/s²]
+                pot_stars=-4.*np.pi*self._G*((r-low)/(2.*r)*sum_1+(high-r)/2.*sum_2)   #[pc²/s²]
                 return pot_stars
         else:
             return self.pot(r)  #[pc²/s²]
@@ -151,8 +152,8 @@ class GCorbit:
         HISTORY:
             2016-01-14 - Written (Milanov, MPIA)
         """    
-        der=self._potential_stars.derivative()
-        return der(r)+self._G*self._bhmass/(r**2) #[pc/s²]
+        der=derivative(self._potential_stars,r)
+        return der+self._G*self._bhmass/(r**2.) #[pc/s²]
 
     def force(self,x,y,z):    
         """
@@ -167,14 +168,14 @@ class GCorbit:
         HISTORY:
             2016-01-14 - Written (Milanov, MPIA)
         """
-        force=np.array(3)
+        force=np.zeros(3)
         r=np.sqrt(x**2+y**2+z**2) #[pc]
         drdx=x/r
         drdy=y/r
         drdz=z/r
-        force[0]=self.r_derivative(r)*drdx  #[pc/s²]
-        force[1]=self.r_derivative(r)*drdy  #[pc/s²]
-        force[2]=self.r_derivative(r)*drdz  #[pc/s²]
+        force[0]=self._r_derivative(r)*drdx  #[pc/s²]
+        force[1]=self._r_derivative(r)*drdy  #[pc/s²]
+        force[2]=self._r_derivative(r)*drdz  #[pc/s²]
         return force
         
 
@@ -185,8 +186,8 @@ class GCorbit:
         PURPOSE:
             integrates the orbit of the star over time
         INPUT:
-            x,y,z = arrays of distances in x, y and z - direction in pc        
-            vx,vy,vz = arrays of velocities in x, y and z - direction in km/s    
+            x,y,z = distance of one star in x, y and z - direction in pc        
+            vx,vy,vz = velocities of the star in x, y and z - direction in km/s    
             t in years; has to be a multiple of dt (default: None)
             dt in years (default: None)
             method: (default: 'leapfrog')
@@ -198,7 +199,9 @@ class GCorbit:
             t_yr = array of each time step in years
         HISTORY:
             
-        """    
+        """  
+        if dt is None or t_end is None:
+            sys.exit("Error in GCorbit.orbit(): Specify dt and t_end.")  
         t_end_sec=un.yr.to(un.s,t_end)  #[s]
         dt_sec=un.yr.to(un.s,dt)        #[s]  
 
@@ -207,8 +210,6 @@ class GCorbit:
         vz_pcs=(un.km/un.s).to((un.pc/un.s),vz) #[pc/s]
         
         if method == 'leapfrog':
-            if dt is None or t_end is None:
-                sys.exit("Error in GCorbit.orbit(): Specify dt and t_end.")
             
             N=int(t_end/dt)
             t=np.linspace(0,t_end_sec,N) #[s]
