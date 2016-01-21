@@ -77,8 +77,8 @@ class GCorbit:
         """
         low=np.min(r)
         high=np.max(r)
-        if np.any(r<low) or np.any(r>high): #s.Z. 45 r wird als array eingegeben, also muss ich hier array befehle benutzen 
-                    sys.exit("r is smaller or bigger than star boundaries")
+        if np.any(r<low) or np.any(r>high): 
+            sys.exit("Error in GCorbit._potential_stars(): r is smaller or bigger than star boundaries")
 
         #if full_integration==True:
         if density is None:
@@ -313,10 +313,10 @@ class GCorbit:
         r=np.sqrt(x**2.+y**2.+z**2.)
         E=self.energy(x,y,z,vx,vy,vz,density=density)
         L=self.angularmom(x,y,z,vx,vy,vz)[0]
-        rmin=opt.fsolve(self._periapocenter_aux,x0=np.min(self._r_bin),args=(E,L,dens))
-        rmax=opt.fsolve(self._periapocenter_aux,x0=np.max(self._r_bin),args=(E,L,dens))
-        if rmin == rmax:
-            sys.exit('Error in periapocenter(): rmin=rmax.')
+        rmin=opt.fsolve(self._periapocenter_aux,x0=1./3.*r,args=(E,L,dens))
+        rmax=opt.fsolve(self._periapocenter_aux,x0=5./3.*r,args=(E,L,dens))
+        #if rmin == rmax:
+        #    sys.exit('Error in GCorbit.periapocenter(): rmin=rmax.')
         if rmin > rmax:
             r_temp=rmax
             rmax=rmin
@@ -339,7 +339,7 @@ class GCorbit:
         """
         pot=self.potential(r,density=density)
         return np.sqrt(2.*E-2.*pot-L**2./r**2.)
-    #29. j_rint ist doch die funktion die dann in J_r als integrand im Integral aufgerufen wird, oder? Das Integral ist ueber r . Das heisst, du uebergibst dieser Funktion NUR das r und ausserdem die Konstanten E und L, die du schon vorher in J_r ausgerechnet hast.
+
 
     def _J_phi(self,x,y,z,vx,vy,vz):
         """
