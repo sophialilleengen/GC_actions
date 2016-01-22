@@ -46,7 +46,7 @@ class GCorbit:
             self._bhmass=bhmass_M_sun    #[M_sun]
         self._x_i=np.polynomial.legendre.leggauss(self._n)[0]        
         self._w_i=np.polynomial.legendre.leggauss(self._n)[1]
-        pot_y=self._potential_stars(self._r_bin,density=self.density(self._r_bin),full_integration=True) #[pc²/s²] 
+        pot_y=self._potential_stars(self._r_bin,density=self.density(self._r_bin),full_integration=True) #[pc²/s²] #statt _r_bin (von der density) r_bin_pot nehmen mit mehr Werten und überprüfen ob logarithmisch oder linear
         self.pot=interpolate.InterpolatedUnivariateSpline(self._r_bin,pot_y)
         return None
 
@@ -63,7 +63,13 @@ class GCorbit:
         HISTORY:
             2016-01-16 - Written (Milanov, MPIA)
         """
-        return np.exp(self.s(np.log(r))) #[M_sun/pc³]
+        high=np.max(self._r_bin)  #[pc]
+        density= np.exp(self.s(np.log(r)))
+        if isinstance(r,np.ndarray):
+            density[r>high]=0.
+        elif r>high:
+            density=0.
+        return  density#[M_sun/pc³]
 
     def _potential_stars(self,r,density=None,full_integration=False):   
         """
@@ -73,7 +79,7 @@ class GCorbit:
             calculates potential caused by stars in Globular cluster
         INPUT:
             r = array of radius coordinates in pc 
-            density = density of Globular cluster at distance r in M_sun/pc³ (default: None)
+            density = density of Globular cluster at distance r in M_sun/pc³ only needed when full_integration=True (default: None)
             full_integration = boolean to have the potential interpolated (default: False)
         OUTPUT:
             potential of the stars in pc²/s²
@@ -81,9 +87,11 @@ class GCorbit:
             2015-12-03 - Written (Milanov, MPIA)
         """
         low=np.min(self._r_bin)   #[pc]
-        high=np.max(self._r_bin)  #[pc]
-        if np.any(r<low) or np.any(r>high): 
-            sys.exit("Error in GCorbit._potential_stars(): r is smaller or bigger than star boundaries")
+        high=1.5*np.max(self._r_bin)  #[pc]
+        if np.any(r<low):
+            sys.exit("Error in GCorbit._potential_stars(): r is smaller than star boundaries")
+        #if np.any(r>high):
+        #    sys.exit("Error in GCorbit._potential_stars(): r is bigger than star boundaries")
         if full_integration==True:
             if density is None:
                 sys.exit("Error in GCorbit._potential_stars(): Specify density.")    
