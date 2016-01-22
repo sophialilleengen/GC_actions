@@ -37,7 +37,7 @@ class GCorbit:
         else:
             self._r_bin=r_pc        #[pc]
             self._rho=rho_M_sunpc3     #[M_sun/pc³]
-        self._n=80 #degree of Gauss-Legendre quadrature
+        self._n=30 #degree of Gauss-Legendre quadrature
         self.s=interpolate.InterpolatedUnivariateSpline(np.log(self._r_bin[:]),np.log(self._rho[:])) #[M_sun/pc³]
         self._G=(un.m**3/(un.kg*un.s**2)).to(un.pc**3/(un.solMass*un.s**2), cs.G) #[pc³/M_sun*s²]
         if bhmass_M_sun is None:
@@ -87,7 +87,7 @@ class GCorbit:
             2015-12-03 - Written (Milanov, MPIA)
         """
         low=np.min(self._r_bin)   #[pc]
-        high=1.5*np.max(self._r_bin)  #[pc]
+        high=np.max(self._r_bin)  #[pc]
         if np.any(r<low):
             sys.exit("Error in GCorbit._potential_stars(): r is smaller than star boundaries")
         #if np.any(r>high):
