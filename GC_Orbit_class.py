@@ -131,7 +131,7 @@ class GCorbit:
         return pot_bh
 
 
-    def potential(self,r,density=None):
+    def potential(self,r):
         """
         NAME:
             potential
@@ -139,13 +139,12 @@ class GCorbit:
             adds star and black hole potential
         INPUT:
             r = array of radius coordinates in pc 
-            density = density of Globular cluster at distance r in M_sun/pc³ (default: None)
         OUTPUT:
             total potential in Globular cluster in pc²/s²
         HISTORY:
             2016-01-16 - Written (Milanov, MPIA)
         """
-        return self._potential_stars(r,density=density)+self._potential_bh(r) #[pc²/s²]
+        return self._potential_stars(r)+self._potential_bh(r) #[pc²/s²]
     
     def _r_derivative(self,r):   
         """
@@ -178,7 +177,6 @@ class GCorbit:
         """
         force=np.zeros(3)
         r=np.sqrt(x**2+y**2+z**2) #[pc]
-        print(r)
         drdx=x/r
         drdy=y/r
         drdz=z/r
@@ -290,7 +288,7 @@ class GCorbit:
         return L,Lx,Ly,Lz
 
 
-    def energy(self,x,y,z,vx,vy,vz,density=None):
+    def energy(self,x,y,z,vx,vy,vz):
         """
         NAME:
             energy
@@ -299,7 +297,6 @@ class GCorbit:
         INPUT:
             x,y,z = arrays of distances in x, y and z - direction in pc        
             vx,vy,vz = arrays of velocities in x, y and z - direction in km/s  
-            density = density of Globular cluster at distance r in M_sun/pc³ (default: None)
         OUTPUT:
             energy at star position in pc²/s²
         HISTORY:
@@ -310,11 +307,11 @@ class GCorbit:
         vz_pcs=(un.km/un.s).to((un.pc/un.s),vz) #[pc/s]
           
         r=np.sqrt(x**2+y**2+z**2)               #[pc]
-        pot=self.potential(r,density=density)   #[pc²/s²]
+        pot=self.potential(r)   #[pc²/s²]
         E=vx_pcs**2./2.+vy_pcs**2./2.+vz_pcs**2./2.+pot     #[pc²/s²]
         return E
 
-    def _periapocenter_aux(self,r,E,L,density=None):
+    def _periapocenter_aux(self,r,E,L):
         """
         NAME:
             _periapocenter_aux
@@ -324,17 +321,16 @@ class GCorbit:
             r = array of radius coordinates in pc
             E = energy at star position in pc²/s²
             L = angular momentum in pc²/s
-            density = density of Globular cluster at distance r in M_sun/pc³ (default: None)
         OUTPUT:
             auxiliary function for periapocenter
         HISTORY:
             2016-01-19 - Written (Milanov, MPIA)
         """ 
         #r=np.abs(r) 
-        func=(1./r)**2.+2.*(self.potential(r,density=density)-E)/L**2. #[1/pc²]  
+        func=(1./r)**2.+2.*(self.potential(r)-E)/L**2. #[1/pc²]  
         return np.absolute(func)
 
-    def periapocenter(self,x,y,z,vx,vy,vz,density=None):
+    def periapocenter(self,x,y,z,vx,vy,vz):
         """
         NAME:
             periapocenter
@@ -343,16 +339,14 @@ class GCorbit:
         INPUT:
             x,y,z = arrays of distances in x, y and z - direction in pc        
             vx,vy,vz = arrays of velocities in x, y and z - direction in km/s  
-            density = density of Globular cluster at distance r in M_sun/pc³ (default: None)            
         OUTPUT:
             rmin = pericenter of orbit in pc
             rmax = apocenter of orbit in pc
         HISTORY:
             2016-01-16 - Written (Milanov, MPIA)
         """
-        dens=density
         r=np.sqrt(x**2.+y**2.+z**2.)    #[pc]
-        E=self.energy(x,y,z,vx,vy,vz,density=density)   #[pc²/s²]
+        E=self.energy(x,y,z,vx,vy,vz)   #[pc²/s²]
         L=self.angularmom(x,y,z,vx,vy,vz)[0]            #[pc²/s]
         rmin=opt.minimize(self._periapocenter_aux,x0=1./4.*r,args=(E,L,dens),bounds=((np.min(self._r_bin),r),)) #[pc]
         #rmin=np.abs(rmin)
@@ -374,7 +368,7 @@ class GCorbit:
         return rmin.x,rmax.x    
     
 
-    def _j_rint(self,r,E,L,density=None):
+    def _j_rint(self,r,E,L):
         """
         NAME:
             _j_rint
@@ -384,13 +378,12 @@ class GCorbit:
             r = array of radius coordinates in pc
             E = energy at star position in pc²/s²
             L = angular momentum in pc²/s
-            density = density of Globular cluster at distance r in M_sun/pc³ (default: None)            
         OUTPUT:
             integrand to integrate in J_r in pc²/s²
         HISTORY:
             2015-12-04 - Written (Milanov, MPIA)
         """
-        pot=self.potential(r,density=density)   #[pc²/s²]
+        pot=self.potential(r)   #[pc²/s²]
         return np.sqrt(2.*E-2.*pot-L**2./r**2.) #[pc²/s²]
 
 
@@ -435,7 +428,7 @@ class GCorbit:
 
 ### J_r beim Integral unsicher wegen Argumenten f�r j_rint und wegen Apo- und Pericenter ###
 
-    def _J_r(self,x,y,z,vx,vy,vz,density=None):
+    def _J_r(self,x,y,z,vx,vy,vz):
         """
         NAME:
             _J_r
@@ -444,21 +437,19 @@ class GCorbit:
         INPUT:
             x,y,z = arrays of distances in x, y and z - direction in pc        
             vx,vy,vz = arrays of velocities in x, y and z - direction in km/s
-            density = density of Globular cluster at distance r in M_sun/pc³ (default: None)              
         OUTPUT:
             J_r in pc²/s
         HISTORY:
             2015-12-04 - Written (Milanov, MPIA)
         """
-        dens=density
-        rmin,rmax=self.periapocenter(x,y,z,vx,vy,vz,density=density)        
-        E=self.energy(x,y,z,vx,vy,vz,density=density)   #[pc²/s²]
+        rmin,rmax=self.periapocenter(x,y,z,vx,vy,vz)        
+        E=self.energy(x,y,z,vx,vy,vz)   #[pc²/s²]
         L=self.angularmom(x,y,z,vx,vy,vz)[0]    #[pc²/s]
         J_r=1/np.pi*intg.quad(self._j_rint,rmin,rmax,args=(E,L,dens))[0] #[pc²/s]
         J_r_pckms=(un.pc**2/un.s).to(un.pc*un.km/un.s,J_r) #[pc*km/s]
         return J_r_pckms
     
-    def actions(self,x,y,z,vx,vy,vz,density=None):
+    def actions(self,x,y,z,vx,vy,vz):
         """
         NAME:
             actions
@@ -467,7 +458,6 @@ class GCorbit:
         INPUT:
             x,y,z = arrays of distances in x, y and z - direction in pc        
             vx,vy,vz = arrays of velocities in x, y and z - direction in km/s
-            density = density of Globular cluster at distance r in M_sun/pc³ (default: None)   
         OUTPUT:
             aJ_phi, J_theta, J_r in pc²/s
         HISTORY:
@@ -475,7 +465,7 @@ class GCorbit:
         """
         J_phi=self._J_phi(x,y,z,vx,vy,vz)               #[pc*km/s]
         J_theta=self._J_theta(x,y,z,vx,vy,vz)           #[pc*km/s]
-        J_r=self._J_r(x,y,z,vx,vy,vz,density=density)   #[pc*km/s]
+        J_r=self._J_r(x,y,z,vx,vy,vz)   #[pc*km/s]
         actions=J_phi,J_theta,J_r
         return actions
 
