@@ -89,9 +89,9 @@ class GCorbit:
         low=np.min(self._r_bin)   #[pc]
         high=np.max(self._r_bin)  #[pc]
         if np.any(r<low):
+            print(r,low)
+            #r=low+0.01*low
             sys.exit("Error in GCorbit._potential_stars(): r is smaller than star boundaries")
-        #if np.any(r>high):
-        #    sys.exit("Error in GCorbit._potential_stars(): r is bigger than star boundaries")
         if full_integration==True:
             if density is None:
                 sys.exit("Error in GCorbit._potential_stars(): Specify density.")    
@@ -178,6 +178,7 @@ class GCorbit:
         """
         force=np.zeros(3)
         r=np.sqrt(x**2+y**2+z**2) #[pc]
+        print(r)
         drdx=x/r
         drdy=y/r
         drdz=z/r
@@ -310,7 +311,7 @@ class GCorbit:
           
         r=np.sqrt(x**2+y**2+z**2)               #[pc]
         pot=self.potential(r,density=density)   #[pc²/s²]
-        E=vx**2./2.+vy**2./2.+vz**2./2.+pot     #[pc²/s²]
+        E=vx_pcs**2./2.+vy_pcs**2./2.+vz_pcs**2./2.+pot     #[pc²/s²]
         return E
 
     def _periapocenter_aux(self,r,E,L,density=None):
@@ -328,8 +329,10 @@ class GCorbit:
             auxiliary function for periapocenter
         HISTORY:
             2016-01-19 - Written (Milanov, MPIA)
-        """    
-        return(1./r)**2.+2.*(self.potential(r,density=density)-E)/L**2. #[1/pc²]
+        """ 
+        #r=np.abs(r) 
+        func=(1./r)**2.+2.*(self.potential(r,density=density)-E)/L**2. #[1/pc²]  
+        return np.absolute(func)
 
     def periapocenter(self,x,y,z,vx,vy,vz,density=None):
         """
@@ -351,18 +354,24 @@ class GCorbit:
         r=np.sqrt(x**2.+y**2.+z**2.)    #[pc]
         E=self.energy(x,y,z,vx,vy,vz,density=density)   #[pc²/s²]
         L=self.angularmom(x,y,z,vx,vy,vz)[0]            #[pc²/s]
-        rmin=opt.fsolve(self._periapocenter_aux,x0=1./3.*r,args=(E,L,dens)) #[pc]
-        rmax=opt.fsolve(self._periapocenter_aux,x0=5./3.*r,args=(E,L,dens)) #[pc]
+        rmin=opt.minimize(self._periapocenter_aux,x0=1./4.*r,args=(E,L,dens),bounds=((np.min(self._r_bin),r),)) #[pc]
+        #rmin=np.abs(rmin)
+        rmax=opt.minimize(self._periapocenter_aux,x0=7./4.*r,args=(E,L,dens),bounds=((r,np.max(self._r_bin)),)) #[pc]
+        #rmax=np.abs(rmax,)
         if rmin == rmax:
-            if rmin==r and rmax==r: #checks if orbit is circular
+            if rmin <= 1.01* r and rmin >= 0.99*r and rmax <= 1.01* r and rmax >= 0.99*r: #checks if orbit is circular
                 return rmin,rmax 
             else:
+                print(rmin,rmax,r)
                 sys.exit('Error in GCorbit.periapocenter(): rmin=rmax; to do: implement con')
-        if rmin > rmax:
-            r_temp=rmax
-            rmax=rmin
+        if rmin.x > rmax.x:
+            r_temp=rmax.x
+            rmax=rmin.x
             rmin=r_temp
-        return rmin,rmax    
+        output=rmin,rmax,r
+        for rr in output:
+            print(rr)
+        return rmin.x,rmax.x    
     
 
     def _j_rint(self,r,E,L,density=None):
@@ -401,7 +410,8 @@ class GCorbit:
         """
         Lz=self.angularmom(x,y,z,vx,vy,vz)[3]   
         J_phi=Lz    #[pc²/s]
-        return J_phi
+        J_phi_pckms=(un.pc**2/un.s).to(un.pc*un.km/un.s,J_phi) #[pc*km/s]
+        return J_phi_pckms
     
     def _J_theta(self,x,y,z,vx,vy,vz):
         """
@@ -418,9 +428,10 @@ class GCorbit:
             2015-11-26 - Written (Milanov, MPIA)
         """
         L=self.angularmom(x,y,z,vx,vy,vz)[0]
-        Lz=self.angularmom(x,y,z,vx,vy,vz)[1]
+        Lz=self.angularmom(x,y,z,vx,vy,vz)[3]
         J_theta=L-np.abs(Lz)    #[pc²/s]
-        return J_theta
+        J_theta_pckms=(un.pc**2/un.s).to(un.pc*un.km/un.s,J_theta) #[pc*km/s]
+        return J_theta_pckms
 
 ### J_r beim Integral unsicher wegen Argumenten f�r j_rint und wegen Apo- und Pericenter ###
 
@@ -444,7 +455,8 @@ class GCorbit:
         E=self.energy(x,y,z,vx,vy,vz,density=density)   #[pc²/s²]
         L=self.angularmom(x,y,z,vx,vy,vz)[0]    #[pc²/s]
         J_r=1/np.pi*intg.quad(self._j_rint,rmin,rmax,args=(E,L,dens))[0] #[pc²/s]
-        return J_r
+        J_r_pckms=(un.pc**2/un.s).to(un.pc*un.km/un.s,J_r) #[pc*km/s]
+        return J_r_pckms
     
     def actions(self,x,y,z,vx,vy,vz,density=None):
         """
@@ -461,10 +473,11 @@ class GCorbit:
         HISTORY:
             2016-01-14 - Written (Milanov, MPIA)
         """
-        J_phi=self._J_phi(x,y,z,vx,vy,vz)               #[pc²/s]
-        J_theta=self._J_theta(x,y,z,vx,vy,vz)           #[pc²/s]
-        J_r=self._J_r(x,y,z,vx,vy,vz,density=density)   #[pc²/s]
-        return J_phi,J_theta,J_r
+        J_phi=self._J_phi(x,y,z,vx,vy,vz)               #[pc*km/s]
+        J_theta=self._J_theta(x,y,z,vx,vy,vz)           #[pc*km/s]
+        J_r=self._J_r(x,y,z,vx,vy,vz,density=density)   #[pc*km/s]
+        actions=J_phi,J_theta,J_r
+        return actions
 
 
 
