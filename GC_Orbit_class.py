@@ -348,9 +348,9 @@ class GCorbit:
         r=np.sqrt(x**2.+y**2.+z**2.)    #[pc]
         E=self.energy(x,y,z,vx,vy,vz)   #[pc²/s²]
         L=self.angularmom(x,y,z,vx,vy,vz)[0]            #[pc²/s]
-        rmin=opt.minimize(self._periapocenter_aux,x0=1./4.*r,args=(E,L),bounds=((np.min(self._r_bin),r),)) #[pc]
+        rmin=opt.minimize(self._periapocenter_aux,x0=1./4.*r,args=(E,L),bounds=((np.min(self._r_bin),r),)) #[pc] #
         #rmin=np.abs(rmin)
-        rmax=opt.minimize(self._periapocenter_aux,x0=7./4.*r,args=(E,L),bounds=((r,np.max(self._r_bin)),)) #[pc]
+        rmax=opt.minimize(self._periapocenter_aux,x0=7./4.*r,args=(E,L),bounds=((r,np.max(self._r_bin)),)) #[pc] 
         #rmax=np.abs(rmax,)
         if rmin == rmax:
             if rmin <= 1.01* r and rmin >= 0.99*r and rmax <= 1.01* r and rmax >= 0.99*r: #checks if orbit is circular
