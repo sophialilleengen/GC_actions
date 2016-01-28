@@ -88,9 +88,8 @@ class GCorbit:
         """
         low=np.min(self._r_bin)   #[pc]
         high=np.max(self._r_bin)  #[pc]
-        if np.any(r<low):
+        if np.any(r<0.99*low):
             print(r,low)
-            #r=low+0.01*low
             sys.exit("Error in GCorbit._potential_stars(): r is smaller than star boundaries")
         if full_integration==True:
             if density is None:
@@ -348,9 +347,9 @@ class GCorbit:
         r=np.sqrt(x**2.+y**2.+z**2.)    #[pc]
         E=self.energy(x,y,z,vx,vy,vz)   #[pc²/s²]
         L=self.angularmom(x,y,z,vx,vy,vz)[0]            #[pc²/s]
-        rmin=opt.minimize(self._periapocenter_aux,x0=1./4.*r,args=(E,L,dens),bounds=((np.min(self._r_bin),r),)) #[pc]
+        rmin=opt.minimize(self._periapocenter_aux,x0=0.1*r,args=(E,L),method='TNC',bounds=((np.min(self._r_bin),r),)) #[pc] #
         #rmin=np.abs(rmin)
-        rmax=opt.minimize(self._periapocenter_aux,x0=7./4.*r,args=(E,L,dens),bounds=((r,np.max(self._r_bin)),)) #[pc]
+        rmax=opt.minimize(self._periapocenter_aux,x0=10.*r,args=(E,L),method='TNC',bounds=((r,np.max(self._r_bin)),)) #[pc] 
         #rmax=np.abs(rmax,)
         if rmin == rmax:
             if rmin <= 1.01* r and rmin >= 0.99*r and rmax <= 1.01* r and rmax >= 0.99*r: #checks if orbit is circular
@@ -362,9 +361,9 @@ class GCorbit:
             r_temp=rmax.x
             rmax=rmin.x
             rmin=r_temp
-        output=rmin,rmax,r
-        for rr in output:
-            print(rr)
+        #output=rmin,rmax,r
+        #for rr in output:
+            #print(rr)
         return rmin.x,rmax.x    
     
 
@@ -445,7 +444,7 @@ class GCorbit:
         rmin,rmax=self.periapocenter(x,y,z,vx,vy,vz)        
         E=self.energy(x,y,z,vx,vy,vz)   #[pc²/s²]
         L=self.angularmom(x,y,z,vx,vy,vz)[0]    #[pc²/s]
-        J_r=1/np.pi*intg.quad(self._j_rint,rmin,rmax,args=(E,L,dens))[0] #[pc²/s]
+        J_r=1/np.pi*intg.quad(self._j_rint,rmin,rmax,args=(E,L))[0] #[pc²/s]
         J_r_pckms=(un.pc**2/un.s).to(un.pc*un.km/un.s,J_r) #[pc*km/s]
         return J_r_pckms
     
