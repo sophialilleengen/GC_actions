@@ -92,9 +92,6 @@ class GCorbit:
         """
         low=0. #np.min(self._r_bin)   #[pc]
         high=np.max(self._r_bin)  #[pc]
-        #if np.any(r<0.99*low):
-            #print(r,low)
-            #sys.exit("Error in GCorbit._potential_stars(): r is smaller than star boundaries")
         if full_integration==True:
             if density is None:
                 sys.exit("Error in GCorbit._potential_stars(): Specify density.")    
@@ -332,7 +329,7 @@ class GCorbit:
         func=(1./r)**2.+2.*(self.potential(r)-E)/L**2. #[1/pc²]  
         return func
 
-    def periapocenter(self,x,y,z,vx,vy,vz):
+    def periapocenter(self,r,x,y,z,vx,vy,vz):
         """
         NAME:
             periapocenter
@@ -347,11 +344,32 @@ class GCorbit:
         HISTORY:
             2016-01-16 - Written (Milanov, MPIA)
         """
-        r=np.sqrt(x**2.+y**2.+z**2.)    #[pc]
+        r_sqrt=np.sqrt(x**2.+y**2.+z**2.)    #[pc]
+
         E=self.energy(x,y,z,vx,vy,vz)   #[pc²/s²]
         L=self.angularmom(x,y,z,vx,vy,vz)[0]            #[pc²/s]
-        rmin=opt.brentq(self._periapocenter_aux,1e-7,r,args=(E,L)) #[pc] 
-        rmax=opt.brentq(self._periapocenter_aux,r,np.max(self._r_bin),args=(E,L)) #[pc] 
+
+        if np.sign(self._periapocenter_aux(r,E,L)) == np.sign(self._periapocenter_aux(1e-7,E,L)): #if star is in peri- or apocenter but can't be calculated due to rounding errors
+            if np.sign(self._periapocenter_aux(r_sqrt,E,L)) != np.sign(self._periapocenter_aux(1e-7,E,L)): 
+                r_mi=r_sqrt
+            elif np.sign(self._periapocenter_aux(r*1.000001,E,L)) != np.sign(self._periapocenter_aux(1e-7,E,L)): 
+                r_mi=r*1.000001
+            else:
+                r_mi=r*0.99999
+        else:
+            r_mi=r
+
+        if np.sign(self._periapocenter_aux(r,E,L)) == np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+            if np.sign(self._periapocenter_aux(r_sqrt,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)): 
+                r_ma=r_sqrt
+            elif np.sign(self._periapocenter_aux(r*1.000001,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+                r_ma=r*1.000001
+            else:
+                r_ma=r*0.99999
+        else:
+            r_ma=r
+        rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
+        rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
         if rmin == rmax:
             if rmin <= 1.01* r and rmin >= 0.99*r and rmax <= 1.01* r and rmax >= 0.99*r: #checks if orbit is circular
                 return rmin,rmax 
@@ -362,9 +380,6 @@ class GCorbit:
             r_temp=rmax
             rmax=rmin
             rmin=r_temp
-        #output=rmin,rmax,r
-        #for rr in output:
-            #print(rr)
         return rmin,rmax    
     
 
@@ -428,7 +443,7 @@ class GCorbit:
 
 ### J_r beim Integral unsicher wegen Argumenten f�r j_rint und wegen Apo- und Pericenter ###
 
-    def _J_r(self,x,y,z,vx,vy,vz):
+    def _J_r(self,r,x,y,z,vx,vy,vz):
         """
         NAME:
             _J_r
@@ -442,14 +457,14 @@ class GCorbit:
         HISTORY:
             2015-12-04 - Written (Milanov, MPIA)
         """
-        rmin,rmax=self.periapocenter(x,y,z,vx,vy,vz)        
+        rmin,rmax=self.periapocenter(r,x,y,z,vx,vy,vz)        
         E=self.energy(x,y,z,vx,vy,vz)   #[pc²/s²]
         L=self.angularmom(x,y,z,vx,vy,vz)[0]    #[pc²/s]
         J_r=1/np.pi*intg.quad(self._j_rint,rmin,rmax,args=(E,L))[0] #[pc²/s]
         J_r_pckms=(un.pc**2/un.s).to(un.pc*un.km/un.s,J_r) #[pc*km/s]
         return J_r_pckms
     
-    def actions(self,x,y,z,vx,vy,vz):
+    def actions(self,r,x,y,z,vx,vy,vz):
         """
         NAME:
             actions
@@ -465,7 +480,7 @@ class GCorbit:
         """
         J_phi=self._J_phi(x,y,z,vx,vy,vz)               #[pc*km/s]
         J_theta=self._J_theta(x,y,z,vx,vy,vz)           #[pc*km/s]
-        J_r=self._J_r(x,y,z,vx,vy,vz)   #[pc*km/s]
+        J_r=self._J_r(r,x,y,z,vx,vy,vz)   #[pc*km/s]
         actions=J_phi,J_theta,J_r
         return actions
 
