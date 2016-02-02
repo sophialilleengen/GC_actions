@@ -63,12 +63,16 @@ class GCorbit:
         HISTORY:
             2016-01-16 - Written (Milanov, MPIA)
         """
+        low=np.min(self._r_bin)
         high=np.max(self._r_bin)  #[pc]
         density= np.exp(self.s(np.log(r)))
         if isinstance(r,np.ndarray):
             density[r>high]=0.
+            density[r<low]=self._rho[0]
         elif r>high:
             density=0.
+        elif r<low:
+            density=self._rho[0]
         return  density#[M_sun/pc³]
 
     def _potential_stars(self,r,density=None,full_integration=False):   
@@ -86,11 +90,11 @@ class GCorbit:
         HISTORY:
             2015-12-03 - Written (Milanov, MPIA)
         """
-        low=np.min(self._r_bin)   #[pc]
+        low=0. #np.min(self._r_bin)   #[pc]
         high=np.max(self._r_bin)  #[pc]
-        if np.any(r<0.99*low):
-            print(r,low)
-            sys.exit("Error in GCorbit._potential_stars(): r is smaller than star boundaries")
+        #if np.any(r<0.99*low):
+            #print(r,low)
+            #sys.exit("Error in GCorbit._potential_stars(): r is smaller than star boundaries")
         if full_integration==True:
             if density is None:
                 sys.exit("Error in GCorbit._potential_stars(): Specify density.")    
@@ -325,9 +329,8 @@ class GCorbit:
         HISTORY:
             2016-01-19 - Written (Milanov, MPIA)
         """ 
-        #r=np.abs(r) 
         func=(1./r)**2.+2.*(self.potential(r)-E)/L**2. #[1/pc²]  
-        return np.absolute(func)
+        return func
 
     def periapocenter(self,x,y,z,vx,vy,vz):
         """
@@ -347,24 +350,22 @@ class GCorbit:
         r=np.sqrt(x**2.+y**2.+z**2.)    #[pc]
         E=self.energy(x,y,z,vx,vy,vz)   #[pc²/s²]
         L=self.angularmom(x,y,z,vx,vy,vz)[0]            #[pc²/s]
-        rmin=opt.minimize(self._periapocenter_aux,x0=0.1*r,args=(E,L),method='TNC',bounds=((np.min(self._r_bin),r),)) #[pc] #
-        #rmin=np.abs(rmin)
-        rmax=opt.minimize(self._periapocenter_aux,x0=10.*r,args=(E,L),method='TNC',bounds=((r,np.max(self._r_bin)),)) #[pc] 
-        #rmax=np.abs(rmax,)
+        rmin=opt.brentq(self._periapocenter_aux,1e-7,r,args=(E,L)) #[pc] 
+        rmax=opt.brentq(self._periapocenter_aux,r,np.max(self._r_bin),args=(E,L)) #[pc] 
         if rmin == rmax:
             if rmin <= 1.01* r and rmin >= 0.99*r and rmax <= 1.01* r and rmax >= 0.99*r: #checks if orbit is circular
                 return rmin,rmax 
             else:
                 print(rmin,rmax,r)
                 sys.exit('Error in GCorbit.periapocenter(): rmin=rmax; to do: implement con')
-        if rmin.x > rmax.x:
-            r_temp=rmax.x
-            rmax=rmin.x
+        if rmin > rmax:
+            r_temp=rmax
+            rmax=rmin
             rmin=r_temp
         #output=rmin,rmax,r
         #for rr in output:
             #print(rr)
-        return rmin.x,rmax.x    
+        return rmin,rmax    
     
 
     def _j_rint(self,r,E,L):
