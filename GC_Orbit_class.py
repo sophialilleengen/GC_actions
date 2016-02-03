@@ -352,24 +352,36 @@ class GCorbit:
         if np.sign(self._periapocenter_aux(r,E,L)) == np.sign(self._periapocenter_aux(1e-7,E,L)): #if star is in peri- or apocenter but can't be calculated due to rounding errors
             if np.sign(self._periapocenter_aux(r_sqrt,E,L)) != np.sign(self._periapocenter_aux(1e-7,E,L)): 
                 r_mi=r_sqrt
+                rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
             elif np.sign(self._periapocenter_aux(r*1.000001,E,L)) != np.sign(self._periapocenter_aux(1e-7,E,L)): 
                 r_mi=r*1.000001
+                rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
             else:
                 r_mi=r*0.99999
+                rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
         else:
             r_mi=r
+            rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
 
         if np.sign(self._periapocenter_aux(r,E,L)) == np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
             if np.sign(self._periapocenter_aux(r_sqrt,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)): 
                 r_ma=r_sqrt
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
             elif np.sign(self._periapocenter_aux(r*1.000001,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
                 r_ma=r*1.000001
-            else:
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*0.99999,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
                 r_ma=r*0.99999
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
+            else:
+                r_ma=r
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin)*2,args=(E,L)) #[pc] 
         else:
             r_ma=r
-        rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
-        rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
+            rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
+        #rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
+        #rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
+
         if rmin == rmax:
             if rmin <= 1.01* r and rmin >= 0.99*r and rmax <= 1.01* r and rmax >= 0.99*r: #checks if orbit is circular
                 return rmin,rmax 
@@ -480,7 +492,7 @@ class GCorbit:
         """
         J_phi=self._J_phi(x,y,z,vx,vy,vz)               #[pc*km/s]
         J_theta=self._J_theta(x,y,z,vx,vy,vz)           #[pc*km/s]
-        J_r=self._J_r(r,x,y,z,vx,vy,vz)   #[pc*km/s]
+        J_r=self._J_r(r,x,y,z,vx,vy,vz)                 #[pc*km/s]
         actions=J_phi,J_theta,J_r
         return actions
 
