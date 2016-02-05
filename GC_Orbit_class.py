@@ -375,7 +375,7 @@ class GCorbit:
                 rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
             else:
                 r_ma=r
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin)*2,args=(E,L)) #[pc] 
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin)*2.,args=(E,L)) #[pc] 
         else:
             r_ma=r
             rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
@@ -486,7 +486,7 @@ class GCorbit:
             x,y,z = arrays of distances in x, y and z - direction in pc        
             vx,vy,vz = arrays of velocities in x, y and z - direction in km/s
         OUTPUT:
-            aJ_phi, J_theta, J_r in pc²/s
+            J_phi, J_theta, J_r in pc²/s
         HISTORY:
             2016-01-14 - Written (Milanov, MPIA)
         """
@@ -496,6 +496,53 @@ class GCorbit:
         actions=J_phi,J_theta,J_r
         return actions
 
+    def v_circ(self,r):
+        """
+        NAME:
+            v_circ
+        PURPOSE:
+            returns circular velocity
+        INPUT:
+            r - radius at which circular velocity should be calculated
+        OUTPUT:
+            v_circ
+        HISTORY:
+            2016-02-05 - Written (Milanov, MPIA)
+        """
+        v_circ=np.sqrt(r*self._r_derivative(r))
+        return v_circ
 
+    def _r_guide_aux(self,r,L):
+        """
+        NAME:
+            _r_guide_aux
+        PURPOSE:
+            returns function to solve in r_guide
+        INPUT:
+            r - radius at which function is evaluated
+        OUTPUT:
+            function
+        HISTORY:
+            2016-02-05 - Written (Milanov, MPIA)
+        """
+        return r*self.v_circ(r)-np.sqrt(L**2)
+        
+    def r_guide(self,x,y,z,vx,vy,vz):
+        """
+        NAME:
+            r_guide
+        PURPOSE:
+            returns guiding-star radius 
+        INPUT:
+            x,y,z = arrays of distances in x, y and z - direction in pc        
+            vx,vy,vz = arrays of velocities in x, y and z - direction in km/s
+        OUTPUT:
+            aJ_phi, J_theta, J_r in pc²/s
+        HISTORY:
+            2016-02-05 - Written (Milanov, MPIA)
+        """
+        L=self.angularmom(x,y,z,vx,vy,vz)[0] 
+        r_guide=opt.brentq(self._r_guide_aux,1e-7,2.*np.max(self._r_bin),args=(L))
+        return r_guide
 
 
