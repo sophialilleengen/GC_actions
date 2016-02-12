@@ -382,12 +382,12 @@ class GCorbit:
         #rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
         #rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
 
-        if rmin == rmax:
-            if rmin <= 1.01* r and rmin >= 0.99*r and rmax <= 1.01* r and rmax >= 0.99*r: #checks if orbit is circular
-                return rmin,rmax 
-            else:
-                print(rmin,rmax,r)
-                sys.exit('Error in GCorbit.periapocenter(): rmin=rmax; to do: implement con')
+        #if rmin == rmax:
+         #   if rmin <= 1.01* r and rmin >= 0.99*r and rmax <= 1.01* r and rmax >= 0.99*r: #checks if orbit is circular
+          #      return rmin,rmax 
+           # else:
+            #    print(rmin,rmax,r)
+             #   sys.exit('Error in GCorbit.periapocenter(): rmin=rmax; to do: implement con')
         if rmin > rmax:
             r_temp=rmax
             rmax=rmin
@@ -527,7 +527,7 @@ class GCorbit:
         """
         return r*self.v_circ(r)-np.sqrt(L**2)
         
-    def r_guide(self,x,y,z,vx,vy,vz):
+    def r_guide(self,r,x,y,z,vx,vy,vz):
         """
         NAME:
             r_guide
@@ -542,7 +542,28 @@ class GCorbit:
             2016-02-05 - Written (Milanov, MPIA)
         """
         L=self.angularmom(x,y,z,vx,vy,vz)[0] 
-        r_guide=opt.brentq(self._r_guide_aux,1e-7,2.*np.max(self._r_bin),args=(L))
-        return r_guide
+        E=self.energy(x,y,z,vx,vy,vz)
+
+        #if np.sign(self._r_guide_aux(self.periapocenter(r,x,y,z,vx,vy,vz)[0],L)) == np.sign(self._r_guide_aux(self.periapocenter(r,x,y,z,vx,vy,vz)[1],L)): #if star is in peri- or apocenter but can't be calculated due to rounding errors
+        #    if np.sign(self._r_guide_aux(2.*np.max(self._r_bin),L)) != np.sign(self._r_guide_aux(1e-7,L)):
+        #        r_guide=opt.brentq(self._r_guide_aux,1e-7,2.*np.max(self._r_bin),args=(L)) 
+            #    r_mi=r_sqrt
+            #    rmin=opt.brentq(self._r_guide_aux,1e-7,r_mi,args=(L)) #[pc] 
+            #elif np.sign(self._r_guide_aux(r*1.000001,E,L)) != np.sign(self._r_guide_aux(1e-7,E,L)): 
+            #    r_mi=r*1.000001
+            #    rmin=opt.brentq(self._r_guide_aux,1e-7,r_mi,args=(L)) #[pc] 
+            #else:
+            #    r_mi=r*0.99999
+            #    rmin=opt.brentq(self._r_guide_aux,1e-7,r_mi,args=(L)) #[pc] 
+        #else:
+            #r_mi=r
+            #rmin=opt.brentq(self._r_guide_aux,1e-7,r_mi,args=(L)) #[pc] 
+        #    r_guide=opt.brentq(self._r_guide_aux,self.periapocenter(r,x,y,z,vx,vy,vz)[0],self.periapocenter(r,x,y,z,vx,vy,vz)[1],args=(L))  
+        #print(len(r),len(self.periapocenter(r,x,y,z,vx,vy,vz)[0],self.periapocenter(r,x,y,z,vx,vy,vz)[1]))
+        bnds=((self.periapocenter(r,x,y,z,vx,vy,vz)[0],self.periapocenter(r,x,y,z,vx,vy,vz)[1]),)
+        r_guide=opt.minimize(self._periapocenter_aux,x0=r,args=(E,L),bounds=bnds)
+        r_guide_x=r_guide.x
+        return r_guide_x
+
 
 
