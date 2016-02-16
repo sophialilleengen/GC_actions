@@ -1,4 +1,6 @@
 import numpy as np
+from astropy import units as un
+from scipy import constants as cs
 
 class GCphasespace:
     def __init__(self,r,bin_num=20):
@@ -17,21 +19,10 @@ class GCphasespace:
         self._stars=len(r)
         self._bin_num=bin_num
         self._spb=self._stars/self._bin_num
+        self._G=(un.m**3/(un.kg*un.s**2)).to(un.pc**3/(un.solMass*un.s**2), cs.G) #[pc³/M_sun*s²]
+        self._c=(un.m/un.s).to(un.pc/un.s, cs.c)
         return None
 
-    def cmd(self):
-        """
-        NAME:
-            cmd
-        PURPOSE:
-            returns color magnitude diagram with optional isochrones
-        INPUT:
-            
-        OUTPUT:
-            
-        HISTORY:
-            2015-10-15 - Written (Milanov, MPIA)
-        """
         
     def mean_distance(self,r):
         R_mean=np.zeros(self._bin_num)
@@ -114,4 +105,8 @@ class GCphasespace:
         R_final=np.insert(R,0,R_extra)
         
         return R_final,rho_final
+
+    def event_horizon(self,bh_mass_msun):
+        r_s=2.*self._G*bh_mass_msun/(self._c**2.) #[pc]
+        return r_s
         
