@@ -63,16 +63,17 @@ class GCorbit:
         HISTORY:
             2016-01-16 - Written (Milanov, MPIA)
         """
+        self._rho[0]=1.5*self._rho[0]
         low=np.min(self._r_bin)
         high=np.max(self._r_bin)  #[pc]
         density= np.exp(self.s(np.log(r)))
         if isinstance(r,np.ndarray):
             density[r>high]=0.
-            density[r<low]=1e5
+            density[r<low]=self._rho[0]
         elif r>high:
             density=0.
         elif r<low:
-            density=1e5
+            density=self._rho[0]
         return  density#[M_sun/pc³]
 
     def _potential_stars(self,r,density=None,full_integration=False):   

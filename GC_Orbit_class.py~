@@ -356,8 +356,20 @@ class GCorbit:
             elif np.sign(self._periapocenter_aux(r*1.000001,E,L)) != np.sign(self._periapocenter_aux(1e-7,E,L)): 
                 r_mi=r*1.000001
                 rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
-            else:
+            elif np.sign(self._periapocenter_aux(r*0.99999,E,L)) != np.sign(self._periapocenter_aux(1e-7,E,L)):
                 r_mi=r*0.99999
+                rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*1.00001,E,L)) != np.sign(self._periapocenter_aux(1e-7,E,L)): 
+                r_mi=r*1.00001
+                rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*0.9999,E,L)) != np.sign(self._periapocenter_aux(1e-7,E,L)):
+                r_mi=r*0.9999
+                rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*1.0001,E,L)) != np.sign(self._periapocenter_aux(1e-7,E,L)): 
+                r_mi=r*1.0001
+                rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*0.999,E,L)) != np.sign(self._periapocenter_aux(1e-7,E,L)):
+                r_mi=r*0.999
                 rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
         else:
             r_mi=r
@@ -372,6 +384,18 @@ class GCorbit:
                 rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
             elif np.sign(self._periapocenter_aux(r*0.99999,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
                 r_ma=r*0.99999
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*1.00001,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+                r_ma=r*1.00001
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*0.9999,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+                r_ma=r*0.9999
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*1.0001,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+                r_ma=r*1.0001
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*0.999,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+                r_ma=r*0.999
                 rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
             else:
                 r_ma=r
@@ -509,7 +533,8 @@ class GCorbit:
         HISTORY:
             2016-02-05 - Written (Milanov, MPIA)
         """
-        v_circ=np.sqrt(r*self._r_derivative(r))
+        print(self._r_derivative(r))
+        v_circ=np.sqrt(r*self._r_derivative(r)) #[pc/s]
         return v_circ
 
     def _r_guide_aux(self,r,L):
