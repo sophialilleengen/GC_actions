@@ -448,7 +448,7 @@ class GCorbit:
             x,y,z = arrays of distances in x, y and z - direction in pc        
             vx,vy,vz = arrays of velocities in x, y and z - direction in km/s  
         OUTPUT:
-            J_phi in pc²/s
+            J_phi in pc*km/s
         HISTORY:
             2015-11-26 - Written (Milanov, MPIA)
         """
@@ -551,7 +551,7 @@ class GCorbit:
         """
         return r*self.v_circ(r)-np.sqrt(L**2)
         
-    def r_guide(self,r,x,y,z,vx,vy,vz):
+    def r_guide_min(self,r,x,y,z,vx,vy,vz):
         """
         NAME:
             r_guide
@@ -568,26 +568,15 @@ class GCorbit:
         L=self.angularmom(x,y,z,vx,vy,vz)[0] 
         E=self.energy(x,y,z,vx,vy,vz)
 
-        #if np.sign(self._r_guide_aux(self.periapocenter(r,x,y,z,vx,vy,vz)[0],L)) == np.sign(self._r_guide_aux(self.periapocenter(r,x,y,z,vx,vy,vz)[1],L)): #if star is in peri- or apocenter but can't be calculated due to rounding errors
-        #    if np.sign(self._r_guide_aux(2.*np.max(self._r_bin),L)) != np.sign(self._r_guide_aux(1e-7,L)):
-        #        r_guide=opt.brentq(self._r_guide_aux,1e-7,2.*np.max(self._r_bin),args=(L)) 
-            #    r_mi=r_sqrt
-            #    rmin=opt.brentq(self._r_guide_aux,1e-7,r_mi,args=(L)) #[pc] 
-            #elif np.sign(self._r_guide_aux(r*1.000001,E,L)) != np.sign(self._r_guide_aux(1e-7,E,L)): 
-            #    r_mi=r*1.000001
-            #    rmin=opt.brentq(self._r_guide_aux,1e-7,r_mi,args=(L)) #[pc] 
-            #else:
-            #    r_mi=r*0.99999
-            #    rmin=opt.brentq(self._r_guide_aux,1e-7,r_mi,args=(L)) #[pc] 
-        #else:
-            #r_mi=r
-            #rmin=opt.brentq(self._r_guide_aux,1e-7,r_mi,args=(L)) #[pc] 
-        #    r_guide=opt.brentq(self._r_guide_aux,self.periapocenter(r,x,y,z,vx,vy,vz)[0],self.periapocenter(r,x,y,z,vx,vy,vz)[1],args=(L))  
-        #print(len(r),len(self.periapocenter(r,x,y,z,vx,vy,vz)[0],self.periapocenter(r,x,y,z,vx,vy,vz)[1]))
         bnds=((self.periapocenter(r,x,y,z,vx,vy,vz)[0],self.periapocenter(r,x,y,z,vx,vy,vz)[1]),)
         r_guide=opt.minimize(self._periapocenter_aux,x0=r,args=(E,L),bounds=bnds)
         r_guide_x=r_guide.x
         return r_guide_x
 
 
-
+    def r_guide_root(self,r,x,y,z,vx,vy,vz):
+        L=self.angularmom(x,y,z,vx,vy,vz)[0] 
+        a=np.min(self._r_bin)
+        b=np.max(self._r_bin)
+        rg_r=opt.brentq(self._r_guide_aux,a=a,b=b,args=(L))
+        return rg_r
