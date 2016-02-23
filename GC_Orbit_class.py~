@@ -448,7 +448,7 @@ class GCorbit:
             x,y,z = arrays of distances in x, y and z - direction in pc        
             vx,vy,vz = arrays of velocities in x, y and z - direction in km/s  
         OUTPUT:
-            J_phi in pc²/s
+            J_phi in pc*km/s
         HISTORY:
             2015-11-26 - Written (Milanov, MPIA)
         """
