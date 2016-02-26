@@ -90,14 +90,14 @@ class GCphasespace:
         for n in range(step):
             inbin=(r_i[n]<r) * (r<=r_a[n]) #r_3d wird verwendet! creates boolean arrays woth true values if star is in bin distance
             M[n]=np.sum(m1[inbin])+np.sum(m2[inbin]) #mass array with both masses of binary system
-            rho[n]=M[n]/((r_a[n]**2-r_i[n]**2)*np.pi) #calculates density of bin
+            rho[n]=M[n]/((r_a[n]**3-r_i[n]**3)*np.pi*4./3.) #calculates density of bin
             R[n]=np.mean(r[inbin]) #calculates mean distance of bin
             print(n,np.sum(inbin))
 
     
         #extrabin am anfang
         M_extra=np.sum(m1[r<r0])+np.sum(m2[r<r0])
-        rho_extra=M_extra/(r0**2*np.pi)
+        rho_extra=M_extra/(r0**3*4./3.*np.pi)
         R_extra=np.mean(r[r<r0])
         #einfuegen in bereits angefertigte arrays an erster Stelle
         M_final=np.insert(M,0,M_extra)
