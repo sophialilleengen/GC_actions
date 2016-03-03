@@ -498,7 +498,7 @@ class GCorbit:
         L=self.angularmom(x,y,z,vx,vy,vz)[0]    #[pc²/s]
         J_r=1/np.pi*intg.quad(self._j_rint,rmin,rmax,args=(E,L))[0] #[pc²/s]
         J_r_pckms=(un.pc**2/un.s).to(un.pc*un.km/un.s,J_r) #[pc*km/s]
-        return J_r_pckms
+        return J_r_pckms,rmin,rmax
     
     def actions(self,r,x,y,z,vx,vy,vz):
         """

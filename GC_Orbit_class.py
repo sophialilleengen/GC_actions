@@ -310,7 +310,10 @@ class GCorbit:
         pot=self.potential(r)   #[pc²/s²]
         E=vx_pcs**2./2.+vy_pcs**2./2.+vz_pcs**2./2.+pot     #[pc²/s²]
         return E
-
+    def effective_potential(self,r,L):
+        func=self.potential(r)+L**2/(2*r**2)
+        return func
+        
     def _periapocenter_aux(self,r,E,L):
         """
         NAME:
