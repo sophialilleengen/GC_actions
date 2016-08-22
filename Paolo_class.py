@@ -92,7 +92,8 @@ class GCphasespace:
             M[n]=np.sum(m1[inbin])+np.sum(m2[inbin]) #mass array with both masses of binary system
             rho[n]=M[n]/((r_a[n]**3-r_i[n]**3)*np.pi*4./3.) #calculates density of bin
             R[n]=np.mean(r[inbin]) #calculates mean distance of bin
-            print(n,np.sum(inbin))
+            if np.sum(inbin) < 40:
+                print(n, np.sum(inbin))
 
     
         #extrabin am anfang
