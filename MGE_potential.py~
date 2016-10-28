@@ -1,268 +1,181 @@
 import numpy as np
-from scipy import interpolate
+from astropy import units as un
+from scipy import constants as cs
 from scipy import integrate as intg
 from scipy import optimize as opt
-from scipy import constants as cs
 from scipy.misc import derivative
-from astropy import units as un
 import sys
 
-
-
-class GCorbit:
-    def __init__(self,r_pc=None,rho_M_sunpc3=None,bhmass_M_sun=None,inputfilename=None,n=None): 
+class MGE_orbit: 
+    def __init__(self, counts = None, sigma = None, inputfilename = None, M_BH = None):
         """
         NAME:
             __init__
         PURPOSE:
-            initialize a GCorbit object - a Globular cluster object which calculates actions and integrates orbits.
+            initialize a MGE object
         INPUT:
-            r_pc = array of radius coordinates in pc (default: None)
-            rho_M_sunpc3 = array of density values depending on r_pc in M_sun/pc^3 (default: None)
-            bhmass_M_sun = mass of the central black hole in M_sun, (default: None)
-            inputfilename = name (and path if not in same repository) of file containing distance and density data (default: None)
-            n = degree of Gauss-Legendre quadrature (default: None)
+            counts: sol[0, : ] of MGE of density profile
+            sigma: sol[1, : ] of MGE of density profile
+            inputfilename: file containing mge.sol results
+            M_BH: Mass of central IMBH (if one is there)
         OUTPUT:
             instance
         HISTORY:
-            2016-01-15 - Written (Milanov, MPIA)
+            2016-08-22 - Written (Milanov, MPIA)
+            2016-08-23 - M_BH added (Milanov, MPIA)
         """
-
         if inputfilename is not None:
-            data=np.loadtxt(inputfilename)        
-            self._r_bin  = data[0,:]     #[pc]
-            self._rho = data[1,:]     #[M_sun/pc^3]
-        elif r_pc is None or rho_M_sunpc3 is None:
-            sys.exit("Error in GCorbit.__init__(): Specify input file or r and rho.")
+            data = np.loadtxt(inputfilename)        
+            self._counts = data[0,:]     #[M_sun / pc^2]
+            self._sigma = data[1,:]     #[pc]
+        elif counts is None or sigma is None:
+            sys.exit("Error in MGE_potential.__init__(): Specify input file or counts and sigma.")
         else:
-            self._r_bin=r_pc        #[pc]
-            self._rho=rho_M_sunpc3     #[M_sun/pc^3]
-        self._n=30 #degree of Gauss-Legendre quadrature
-        self.s=interpolate.InterpolatedUnivariateSpline(np.log(self._r_bin[:]),np.log(self._rho[:])) #[M_sun/pc^3]
-        self._G=(un.m**3/(un.kg*un.s**2)).to(un.pc**3/(un.solMass*un.s**2), cs.G) #[pc^3/M_sun*s^2]
-        if bhmass_M_sun is None:
-            self._bhmass=0
-        else:
-            self._bhmass=bhmass_M_sun    #[M_sun]
-        self._x_i=np.polynomial.legendre.leggauss(self._n)[0]        
-        self._w_i=np.polynomial.legendre.leggauss(self._n)[1]
-        pot_y=self._potential_stars(self._r_bin,density=self.density(self._r_bin),full_integration=True) #[pc^2/s^2] #statt _r_bin (von der density) r_bin_pot nehmen mit mehr Werten #und ueberpruefen ob logarithmisch oder linear
-        self.pot=interpolate.InterpolatedUnivariateSpline(self._r_bin,pot_y)
+            self._counts = counts       #[M_sun / pc^2]
+            self._sigma = sigma     #[pc]
+
+        self._G = (un.m ** 3 / (un.kg * un.s ** 2)).to(un.pc ** 3/(un.solMass * un.s ** 2), cs.G) #[pc^3 / M_sun * s^2]
+        self._mass = self._counts * 2. * cs.pi * self._sigma ** 2 #[M_sun]
+        self._bhmass = M_BH #[M_sun]
+        self._counts3d = self._counts / (np.sqrt(2. * cs.pi) * self._sigma) #[M_sun / pc^3]
         return None
 
-    def density(self,r):
+    def _H_j(self, u, R):
         """
         NAME:
-            density
+            _H_j
         PURPOSE:
-            returns density at distance r
+            auxiliary function to calculate potential (see Cappellari 2008, (17))
         INPUT:
-            r = array of radius coordinates in pc       
+            u: integration parameter
+            R: distance from centre (only input in potential function)
+            sigma: sigma given from MGE 
         OUTPUT:
-            density in M_sun/pc^3
+            one factor of integrand
         HISTORY:
-            2016-01-16 - Written (Milanov, MPIA)
+            2016-08-22 - Written (Milanov, MPIA)
         """
-        low=np.min(self._r_bin)
-        high=np.max(self._r_bin)  #[pc]
-        density= np.exp(self.s(np.log(r)))
-        if isinstance(r,np.ndarray):
-            density[r>high]=0.
-            density[r<low]=self._rho[0]
-        elif r>high:
-            density=0.
-        elif r<low:
-            density=self._rho[0]
-        return  density#[M_sun/pc^3]
+        sigma = self._sigma #[pc]
+        H = np.exp(- u ** 2 * R ** 2 / (2. * sigma ** 2)) #[]
+        return H
 
-    def _potential_stars(self,r,density=None,full_integration=False):   
+    def _integrand (self, u, R):
         """
         NAME:
-            _potential_stars
+            _integrand
         PURPOSE:
-            calculates potential caused by stars in Globular cluster
+            gives integrand for potential
         INPUT:
-            r = array of radius coordinates in pc 
-            density = density of Globular cluster at distance r in M_sun/pc^3 only needed when full_integration=True (default: None)
-            full_integration = boolean to have the potential interpolated (default: False)
+            u: integration parameter
+            R: distance from centre (only input in potential function)
+            sigma: sigma given from MGE
+            M: mass calculated from counts given from MGE
         OUTPUT:
-            potential of the stars in pc^2/s^2
-        HISTORY:
-            2015-12-03 - Written (Milanov, MPIA)
+            integrand
+        HISTORY
+            2016-08-22 - Written (Milanov, MPIA)
         """
-        low=0. #np.min(self._r_bin)   #[pc]
-        high=np.max(self._r_bin)  #[pc]
-        if full_integration==True:
-            if density is None:
-                sys.exit("Error in GCorbit._potential_stars(): Specify density.")    
-            sum1=np.zeros(self._n)    
-            sum2=np.zeros(self._n)
-            if isinstance(r,np.ndarray):
-                return np.array([self._potential_stars(rr,density=density,full_integration=full_integration) for rr in r])
-            else:
-                x1=((r-low)/2.)*self._x_i+(r+low)/2.    #[pc]
-                x2=((high-r)/2.)*self._x_i+(high+r)/2.    #[pc]
-                for i in range(self._n):
-                    s1=self.density(x1[i])  #[M_sun/pc^3]
-                    s2=self.density(x2[i])  #[M_sun/pc^3]
-                    sum1[i]=(self._w_i[i]*x1[i]**2.*s1)  #[M_sun/pc]
-                    sum2[i]=(self._w_i[i]*x2[i]*s2)     #[M_sun/pc^2]
-                sum_1=np.sum(sum1)
-                sum_2=np.sum(sum2)
-                pot_stars=-4.*np.pi*self._G*((r-low)/(2.*r)*sum_1+(high-r)/2.*sum_2)   #[pc^2/s^2]
-                return pot_stars
-        else:
-            return self.pot(r)  #[pc^2/s^2]
+        sigma = self._sigma #[pc]
+        M = self._mass #[M_sun]
+        H = self._H_j(u, R) #[]
+        return np.sum(M * H / sigma) #[M_sun/pc]
+
+    def _star_potential (self, R):
+        """
+        NAME:
+            _star_potential
+        PURPOSE:
+            calculates potential of stars at distance R
+        INPUT:
+            R: distance from centre
+        OUTPUT:
+            potential of stars in GC
+        HISTORY
+            2016-08-22 - Written (Milanov, MPIA)
+            2016-08-23 - Changed Potential to _star_potential to add in a later function the IMBH potential (Milanov, MPIA)
+        """
+        a = - np.sqrt( 2. / cs.pi) * self._G    #[pc^3/M_sun*s^2]
+        b = intg.quad(self._integrand, 0., 1., args = (R))[0] #[M_sun/pc]
+        return a * b #[pc^2/s^2]
+
     
-    def _potential_bh(self,r):
+    def _bh_potential(self, R):
         """
         NAME:
-            _potential_bh
+            _bh_potential
         PURPOSE:
-            calculates potential caused by central black hole
+            calculates potential of IMBH at distance R_IMBH
         INPUT:
-            r = array of radius coordinates in pc
+            R: distance from centre
         OUTPUT:
-            potential of black hole in pc^2/s^2
-        HISTORY:
-            2015-12-10 - Written (Milanov, MPIA)
+            potential of IMBH in GC
+        HISTORY
+            2016-08-23 - Written (Milanov, MPIA)
         """
-        pot_bh=-self._G*self._bhmass/r #[pc^2/s^2]
+        M_BH = self._bhmass #[M_sun]
+        if M_BH == None:
+            pot_bh = 0
+        else:
+            pot_bh = - self._G * M_BH / R #[pc^2/s^2]
         return pot_bh
 
-
-    def potential(self,r):
+    def potential(self, R):
         """
         NAME:
             potential
         PURPOSE:
-            adds star and black hole potential
+            calculates total potential at distance R
         INPUT:
-            r = array of radius coordinates in pc 
+            R: distance from centre
         OUTPUT:
-            total potential in Globular cluster in pc^2/s^2
-        HISTORY:
-            2016-01-16 - Written (Milanov, MPIA)
+            potential of IMBH and stars in GC
+        HISTORY
+            2016-08-23 - Written (Milanov, MPIA)
         """
-        return self._potential_stars(r)+self._potential_bh(r) #[pc^2/s^2]
-    
+        pot = self._bh_potential(R) + self._star_potential(R) #[pc^2/s^2]
+        return pot
+
     def _r_derivative(self,r):   
         """
         NAME:
             _r_derivative
         PURPOSE:
-            calculates derivative of interpolated potential
+            calculates derivative of potential
         INPUT:
             r = array of radius coordinates in pc 
         OUTPUT:
             r-derivative of potential in pc/s^2
         HISTORY:
-            2016-01-14 - Written (Milanov, MPIA)
+            2016-02-24 - Written (Milanov, MPIA)
         """    
-        der=derivative(self._potential_stars,r)
-        return der+self._G*self._bhmass/(r**2.) #[pc/s^2]
+        der = derivative(self._potential_stars,r)
+        return der + self._G * self._bhmass / (r ** 2.) #[pc/s^2]
 
-    def force(self,x,y,z):    
+    def force(self, x, y, z):    
         """
         NAME:
             force    
         PURPOSE:
             calculates force from potential    
         INPUT:
-            x,y,z = arrays of distances in x, y and z - direction in pc 
+            x, y, z = arrays of distances in x, y and z - direction in pc 
         OUTPUT:
             force array in pc/s^2; force[0] in x, force[1] in y and force[2] in z direction
         HISTORY:
             2016-01-14 - Written (Milanov, MPIA)
         """
-        force=np.zeros(3)
-        r=np.sqrt(x**2+y**2+z**2) #[pc]
-        drdx=x/r
-        drdy=y/r
-        drdz=z/r
-        force[0]=self._r_derivative(r)*drdx  #[pc/s^2]
-        force[1]=self._r_derivative(r)*drdy  #[pc/s^2]
-        force[2]=self._r_derivative(r)*drdz  #[pc/s^2]
+        force = np.zeros(3)
+        r = np.sqrt(x ** 2 + y ** 2 + z ** 2) #[pc]
+        drdx = x / r
+        drdy = y / r
+        drdz = z / r
+        force[0] = self._r_derivative(r) * drdx  #[pc/s^2]
+        force[1] = self._r_derivative(r) * drdy  #[pc/s^2]
+        force[2] = self._r_derivative(r) * drdz  #[pc/s^2]
         return force
         
 
-    def orbit_integration(self,x,y,z,vx,vy,vz,dt=None,t_end=None,method='leapfrog'):     
-        """
-        NAME:
-            orbit_integration
-        PURPOSE:
-            integrates the orbit of the star over time
-        INPUT:
-            x,y,z = distance of one star in x, y and z - direction in pc        
-            vx,vy,vz = velocities of the star in x, y and z - direction in km/s    
-            t in years; has to be a multiple of dt (default: None)
-            dt in years (default: None)
-            method: (default: 'leapfrog')
-                'leapfrog' for leapfrog integration method 
-                'rk4' for Ruge Kutta fourth order integration method (not yet implemented)
-        OUTPUT:
-            xl,yl,zl = arrays of star position at each time step in x, y and z direction in pc
-            vxl_kms,vyl_kms,vzl_kms = arrays of velocities at each time step in x, y and z - direction in km/s
-            t_yr = array of each time step in years
-        HISTORY:
-            
-        """  
-        if dt is None or t_end is None:
-            sys.exit("Error in GCorbit.orbit(): Specify dt and t_end.")  
-        t_end_sec=un.yr.to(un.s,t_end)  #[s]
-        dt_sec=un.yr.to(un.s,dt)        #[s]  
-
-        vx_pcs=(un.km/un.s).to((un.pc/un.s),vx) #[pc/s]
-        vy_pcs=(un.km/un.s).to((un.pc/un.s),vy) #[pc/s]
-        vz_pcs=(un.km/un.s).to((un.pc/un.s),vz) #[pc/s]
-        
-        if method == 'leapfrog':
-            
-            N=int(t_end/dt)
-            t=np.linspace(0,t_end_sec,N) #[s]
-
-            xl=np.zeros(N+1)
-            yl=np.zeros(N+1)
-            zl=np.zeros(N+1)
-
-            x_l=np.sqrt(xl**2+yl**2+zl**2)
-
-            vxl=np.zeros(N+1)
-            vyl=np.zeros(N+1)
-            vzl=np.zeros(N+1)
-
-            xl[0]=x #[pc]
-            yl[0]=y #[pc]
-            zl[0]=z #[pc]
-
-            vxl[0]=vx_pcs   #[pc/s]
-            vyl[0]=vy_pcs   #[pc/s]
-            vzl[0]=vz_pcs   #[pc/s]
-
-            for i in range(N):
-                a=self.force(xl[i],yl[i],zl[i])     #[pc/s^2]
-        
-                xl[i+1]=xl[i]+vxl[i]*dt_sec+1./2.*a[0]*dt_sec**2    #[pc]
-                yl[i+1]=yl[i]+vyl[i]*dt_sec+1./2.*a[1]*dt_sec**2    #[pc]
-                zl[i+1]=zl[i]+vzl[i]*dt_sec+1./2.*a[2]*dt_sec**2    #[pc]
-        
-                a_1=self.force(xl[i+1],yl[i+1],zl[i+1])     #[pc/s^2]
-        
-                vxl[i+1]=vxl[i]+1./2.*(a[0]+a_1[0])*dt_sec  #[pc/s]
-                vyl[i+1]=vyl[i]+1./2.*(a[1]+a_1[1])*dt_sec  #[pc/s]
-                vzl[i+1]=vzl[i]+1./2.*(a[2]+a_1[2])*dt_sec  #[pc/s]
-        
-            vxl_kms=(un.pc/un.s).to(un.km/un.s,vxl) #[km/s]
-            vyl_kms=(un.pc/un.s).to(un.km/un.s,vxl) #[km/s]
-            vzl_kms=(un.pc/un.s).to(un.km/un.s,vxl) #[km/s]
-            t_yr=un.s.to(un.yr,t)   #[years]
-            return xl,yl,zl,vxl_kms,vyl_kms,vzl_kms,t_yr 
-        
-        elif method == 'rk4':
-            return None
-
-
-    def angularmom(self,x,y,z,vx,vy,vz):
+    def angularmom(self, x, y, z, vx, vy, vz):
         """
         NAME:
             angularmom
@@ -275,11 +188,11 @@ class GCorbit:
             L = total angular momentum in pc^2/s
             Lx,Ly,Lz = angular momentum in x, y and z direction in pc^2/s
         HISTORY:
-            2016-01-14 - Written (Milanov, MPIA)
+            2016-08-24 - Written (Milanov, MPIA)
         """
-        vx_pcs=(un.km/un.s).to((un.pc/un.s),vx) #[pc/s]
-        vy_pcs=(un.km/un.s).to((un.pc/un.s),vy) #[pc/s]
-        vz_pcs=(un.km/un.s).to((un.pc/un.s),vz) #[pc/s]
+        vx_pcs = (un.km / un.s).to((un.pc / un.s), vx) #[pc/s]
+        vy_pcs = (un.km / un.s).to((un.pc / un.s), vy) #[pc/s]
+        vz_pcs = (un.km / un.s).to((un.pc / un.s), vz) #[pc/s]
         
         Lx=y*vz_pcs-z*vy_pcs            #[pc^2/s]
         Ly=z*vx_pcs-x*vz_pcs            #[pc^2/s]

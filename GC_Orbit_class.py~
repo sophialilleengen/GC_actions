@@ -46,7 +46,7 @@ class GCorbit:
             self._bhmass=bhmass_M_sun    #[M_sun]
         self._x_i=np.polynomial.legendre.leggauss(self._n)[0]        
         self._w_i=np.polynomial.legendre.leggauss(self._n)[1]
-        pot_y=self._potential_stars(self._r_bin,density=self.density(self._r_bin),full_integration=True) #[pc^2/s^2] #statt _r_bin (von der density) r_bin_pot nehmen mit mehr Werten #und ueberpruefen ob logarithmisch oder linear
+        pot_y=self._potential_stars(self._r_bin,density=self.density(self._r_bin),full_integration=True) #[pc^2/s^2] #statt _r_bin (von der density) r_bin_pot nehmen mit mehr Werten #und überprüfen ob logarithmisch oder linear
         self.pot=interpolate.InterpolatedUnivariateSpline(self._r_bin,pot_y)
         return None
 

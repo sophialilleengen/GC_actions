@@ -19,7 +19,7 @@ class GCphasespace:
         self._stars=len(r)
         self._bin_num=bin_num
         self._spb=self._stars/self._bin_num
-        self._G=(un.m**3/(un.kg*un.s**2)).to(un.pc**3/(un.solMass*un.s**2), cs.G) #(pc^3/M_sun*s^2)
+        self._G=(un.m**3/(un.kg*un.s**2)).to(un.pc**3/(un.solMass*un.s**2), cs.G) #(pc³/M_sun*s²)
         self._c=(un.m/un.s).to(un.pc/un.s, cs.c)
         return None
 

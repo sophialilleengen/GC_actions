@@ -2,9 +2,11 @@ import numpy as np
 from astropy import units as un
 from scipy import constants as cs
 from scipy import integrate as intg
+from scipy import optimize as opt
+from scipy.misc import derivative
 import sys
 
-class MGE_potential: 
+class MGE_orbit: 
     def __init__(self, counts = None, sigma = None, inputfilename = None, M_BH = None):
         """
         NAME:
@@ -29,13 +31,13 @@ class MGE_potential:
         elif counts is None or sigma is None:
             sys.exit("Error in MGE_potential.__init__(): Specify input file or counts and sigma.")
         else:
-            self._counts = counts       #[M_sun / pc²]
+            self._counts = counts       #[M_sun / pc^2]
             self._sigma = sigma     #[pc]
 
-        self._G = (un.m ** 3 / (un.kg * un.s ** 2)).to(un.pc ** 3/(un.solMass * un.s ** 2), cs.G) #[pc³ / M_sun * s²]
+        self._G = (un.m ** 3 / (un.kg * un.s ** 2)).to(un.pc ** 3/(un.solMass * un.s ** 2), cs.G) #[pc^3 / M_sun * s^2]
         self._mass = self._counts * 2. * cs.pi * self._sigma ** 2 #[M_sun]
         self._bhmass = M_BH #[M_sun]
-        self._counts3d = self._counts / (np.sqrt(2. * cs.pi) * self._sigma) #[M_sun / pc³]
+        self._counts3d = self._counts / (np.sqrt(2. * cs.pi) * self._sigma) #[M_sun / pc^3]
         return None
 
     def _H_j(self, u, R):
@@ -142,12 +144,12 @@ class MGE_potential:
         INPUT:
             r = array of radius coordinates in pc 
         OUTPUT:
-            r-derivative of potential in pc/s²
+            r-derivative of potential in pc/s^2
         HISTORY:
             2016-02-24 - Written (Milanov, MPIA)
         """    
         der = derivative(self._potential_stars,r)
-        return der + self._G * self._bhmass / (r ** 2.) #[pc/s²]
+        return der + self._G * self._bhmass / (r ** 2.) #[pc/s^2]
 
     def force(self, x, y, z):    
         """
@@ -158,7 +160,7 @@ class MGE_potential:
         INPUT:
             x, y, z = arrays of distances in x, y and z - direction in pc 
         OUTPUT:
-            force array in pc/s²; force[0] in x, force[1] in y and force[2] in z direction
+            force array in pc/s^2; force[0] in x, force[1] in y and force[2] in z direction
         HISTORY:
             2016-01-14 - Written (Milanov, MPIA)
         """
@@ -167,9 +169,9 @@ class MGE_potential:
         drdx = x / r
         drdy = y / r
         drdz = z / r
-        force[0] = self._r_derivative(r) * drdx  #[pc/s²]
-        force[1] = self._r_derivative(r) * drdy  #[pc/s²]
-        force[2] = self._r_derivative(r) * drdz  #[pc/s²]
+        force[0] = self._r_derivative(r) * drdx  #[pc/s^2]
+        force[1] = self._r_derivative(r) * drdy  #[pc/s^2]
+        force[2] = self._r_derivative(r) * drdz  #[pc/s^2]
         return force
         
 
@@ -183,8 +185,8 @@ class MGE_potential:
             x,y,z = arrays of distances in x, y and z - direction in pc        
             vx,vy,vz = arrays of velocities in x, y and z - direction in km/s  
         OUTPUT:
-            L = total angular momentum in pc²/s
-            Lx,Ly,Lz = angular momentum in x, y and z direction in pc²/s
+            L = total angular momentum in pc^2/s
+            Lx,Ly,Lz = angular momentum in x, y and z direction in pc^2/s
         HISTORY:
             2016-08-24 - Written (Milanov, MPIA)
         """
@@ -192,10 +194,10 @@ class MGE_potential:
         vy_pcs = (un.km / un.s).to((un.pc / un.s), vy) #[pc/s]
         vz_pcs = (un.km / un.s).to((un.pc / un.s), vz) #[pc/s]
         
-        Lx=y*vz_pcs-z*vy_pcs            #[pc²/s]
-        Ly=z*vx_pcs-x*vz_pcs            #[pc²/s]
-        Lz=x*vy_pcs-y*vx_pcs            #[pc²/s]
-        L=np.sqrt(Lx**2+Ly**2+Lz**2)    #[pc²/s] 
+        Lx=y*vz_pcs-z*vy_pcs            #[pc^2/s]
+        Ly=z*vx_pcs-x*vz_pcs            #[pc^2/s]
+        Lz=x*vy_pcs-y*vx_pcs            #[pc^2/s]
+        L=np.sqrt(Lx**2+Ly**2+Lz**2)    #[pc^2/s] 
         return L,Lx,Ly,Lz
 
 
@@ -209,7 +211,7 @@ class MGE_potential:
             x,y,z = arrays of distances in x, y and z - direction in pc        
             vx,vy,vz = arrays of velocities in x, y and z - direction in km/s  
         OUTPUT:
-            energy at star position in pc²/s²
+            energy at star position in pc^2/s^2
         HISTORY:
             2016-01-14 - Written (Milanov, MPIA)
         """  
@@ -218,8 +220,8 @@ class MGE_potential:
         vz_pcs=(un.km/un.s).to((un.pc/un.s),vz) #[pc/s]
           
         r=np.sqrt(x**2+y**2+z**2)               #[pc]
-        pot=self.potential(r)   #[pc²/s²]
-        E=vx_pcs**2./2.+vy_pcs**2./2.+vz_pcs**2./2.+pot     #[pc²/s²]
+        pot=self.potential(r)   #[pc^2/s^2]
+        E=vx_pcs**2./2.+vy_pcs**2./2.+vz_pcs**2./2.+pot     #[pc^2/s^2]
         return E
 
     def effective_potential(self,r,L):
@@ -234,14 +236,14 @@ class MGE_potential:
             gives auxiliary function to solve in function periapocenter
         INPUT:
             r = array of radius coordinates in pc
-            E = energy at star position in pc²/s²
-            L = angular momentum in pc²/s
+            E = energy at star position in pc^2/s^2
+            L = angular momentum in pc^2/s
         OUTPUT:
             auxiliary function for periapocenter
         HISTORY:
             2016-01-19 - Written (Milanov, MPIA)
         """ 
-        func=(1./r)**2.+2.*(self.potential(r)-E)/L**2. #[1/pc²]  
+        func=(1./r)**2.+2.*(self.potential(r)-E)/L**2. #[1/pc^2]  
         return func
 
     def periapocenter(self,r,x,y,z,vx,vy,vz):
@@ -261,8 +263,8 @@ class MGE_potential:
         """
         r_sqrt=np.sqrt(x**2.+y**2.+z**2.)    #[pc]
 
-        E=self.energy(x,y,z,vx,vy,vz)   #[pc²/s²]
-        L=self.angularmom(x,y,z,vx,vy,vz)[0]            #[pc²/s]
+        E=self.energy(x,y,z,vx,vy,vz)   #[pc^2/s^2]
+        L=self.angularmom(x,y,z,vx,vy,vz)[0]            #[pc^2/s]
 
         if np.sign(self._periapocenter_aux(r,E,L)) == np.sign(self._periapocenter_aux(1e-7,E,L)): #if star is in peri- or apocenter but can't be calculated due to rounding errors
             if np.sign(self._periapocenter_aux(r_sqrt,E,L)) != np.sign(self._periapocenter_aux(1e-7,E,L)): 
@@ -290,36 +292,36 @@ class MGE_potential:
             r_mi=r
             rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
 
-        if np.sign(self._periapocenter_aux(r,E,L)) == np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
-            if np.sign(self._periapocenter_aux(r_sqrt,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)): 
+        if np.sign(self._periapocenter_aux(r,E,L)) == np.sign(self._periapocenter_aux(np.max(self._sigma),E,L)):
+            if np.sign(self._periapocenter_aux(r_sqrt,E,L)) != np.sign(self._periapocenter_aux(np.max(self._sigma),E,L)): 
                 r_ma=r_sqrt
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
-            elif np.sign(self._periapocenter_aux(r*1.000001,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*1.000001,E,L)) != np.sign(self._periapocenter_aux(np.max(self._sigma),E,L)):
                 r_ma=r*1.000001
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
-            elif np.sign(self._periapocenter_aux(r*0.99999,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*0.99999,E,L)) != np.sign(self._periapocenter_aux(np.max(self._sigma),E,L)):
                 r_ma=r*0.99999
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
-            elif np.sign(self._periapocenter_aux(r*1.00001,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*1.00001,E,L)) != np.sign(self._periapocenter_aux(np.max(self._sigma),E,L)):
                 r_ma=r*1.00001
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
-            elif np.sign(self._periapocenter_aux(r*0.9999,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*0.9999,E,L)) != np.sign(self._periapocenter_aux(np.max(self._sigma),E,L)):
                 r_ma=r*0.9999
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
-            elif np.sign(self._periapocenter_aux(r*1.0001,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*1.0001,E,L)) != np.sign(self._periapocenter_aux(np.max(self._sigma),E,L)):
                 r_ma=r*1.0001
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
-            elif np.sign(self._periapocenter_aux(r*0.999,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*0.999,E,L)) != np.sign(self._periapocenter_aux(np.max(self._sigma),E,L)):
                 r_ma=r*0.999
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
             else:
                 r_ma=r
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin)*2.,args=(E,L)) #[pc] 
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma)*2.,args=(E,L)) #[pc] 
         else:
             r_ma=r
-            rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
+            rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
         #rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
-        #rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
+        #rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
 
         #if rmin == rmax:
          #   if rmin <= 1.01* r and rmin >= 0.99*r and rmax <= 1.01* r and rmax >= 0.99*r: #checks if orbit is circular
@@ -342,15 +344,15 @@ class MGE_potential:
             calculates integrand needed for J_r action
         INPUT:
             r = array of radius coordinates in pc
-            E = energy at star position in pc²/s²
-            L = angular momentum in pc²/s
+            E = energy at star position in pc^2/s^2
+            L = angular momentum in pc^2/s
         OUTPUT:
-            integrand to integrate in J_r in pc²/s²
+            integrand to integrate in J_r in pc^2/s^2
         HISTORY:
             2015-12-04 - Written (Milanov, MPIA)
         """
-        pot=self.potential(r)   #[pc²/s²]
-        return np.sqrt(2.*E-2.*pot-L**2./r**2.) #[pc²/s²]
+        pot=self.potential(r)   #[pc^2/s^2]
+        return np.sqrt(2.*E-2.*pot-L**2./r**2.) #[pc^2/s^2]
 
 
     def _J_phi(self,x,y,z,vx,vy,vz):
@@ -368,7 +370,7 @@ class MGE_potential:
             2015-11-26 - Written (Milanov, MPIA)
         """
         Lz=self.angularmom(x,y,z,vx,vy,vz)[3]   
-        J_phi=Lz    #[pc²/s]
+        J_phi=Lz    #[pc^2/s]
         J_phi_pckms=(un.pc**2/un.s).to(un.pc*un.km/un.s,J_phi) #[pc*km/s]
         return J_phi_pckms
     
@@ -382,17 +384,17 @@ class MGE_potential:
             x,y,z = arrays of distances in x, y and z - direction in pc        
             vx,vy,vz = arrays of velocities in x, y and z - direction in km/s              
         OUTPUT:
-            J_theta in pc²/s
+            J_theta in pc^2/s
         HISTORY:
             2015-11-26 - Written (Milanov, MPIA)
         """
         L=self.angularmom(x,y,z,vx,vy,vz)[0]
         Lz=self.angularmom(x,y,z,vx,vy,vz)[3]
-        J_theta=L-np.abs(Lz)    #[pc²/s]
+        J_theta=L-np.abs(Lz)    #[pc^2/s]
         J_theta_pckms=(un.pc**2/un.s).to(un.pc*un.km/un.s,J_theta) #[pc*km/s]
         return J_theta_pckms
 
-### J_r beim Integral unsicher wegen Argumenten f�r j_rint und wegen Apo- und Pericenter ###
+### J_r beim Integral unsicher wegen Argumenten fuer j_rint und wegen Apo- und Pericenter ###
 
     def _J_r(self,r,x,y,z,vx,vy,vz):
         """
@@ -404,14 +406,14 @@ class MGE_potential:
             x,y,z = arrays of distances in x, y and z - direction in pc        
             vx,vy,vz = arrays of velocities in x, y and z - direction in km/s
         OUTPUT:
-            J_r in pc²/s
+            J_r in pc^2/s
         HISTORY:
             2015-12-04 - Written (Milanov, MPIA)
         """
         rmin,rmax=self.periapocenter(r,x,y,z,vx,vy,vz)        
-        E=self.energy(x,y,z,vx,vy,vz)   #[pc²/s²]
-        L=self.angularmom(x,y,z,vx,vy,vz)[0]    #[pc²/s]
-        J_r=1/np.pi*intg.quad(self._j_rint,rmin,rmax,args=(E,L))[0] #[pc²/s]
+        E=self.energy(x,y,z,vx,vy,vz)   #[pc^2/s^2]
+        L=self.angularmom(x,y,z,vx,vy,vz)[0]    #[pc^2/s]
+        J_r=1/np.pi*intg.quad(self._j_rint,rmin,rmax,args=(E,L))[0] #[pc^2/s]
         J_r_pckms=(un.pc**2/un.s).to(un.pc*un.km/un.s,J_r) #[pc*km/s]
         return J_r_pckms,rmin,rmax
     
@@ -425,7 +427,7 @@ class MGE_potential:
             x,y,z = arrays of distances in x, y and z - direction in pc        
             vx,vy,vz = arrays of velocities in x, y and z - direction in km/s
         OUTPUT:
-            J_phi, J_theta, J_r in pc²/s
+            J_phi, J_theta, J_r in pc^2/s
         HISTORY:
             2016-01-14 - Written (Milanov, MPIA)
         """
@@ -476,7 +478,7 @@ class MGE_potential:
             x,y,z = arrays of distances in x, y and z - direction in pc        
             vx,vy,vz = arrays of velocities in x, y and z - direction in km/s
         OUTPUT:
-            aJ_phi, J_theta, J_r in pc²/s
+            aJ_phi, J_theta, J_r in pc^2/s
         HISTORY:
             2016-02-05 - Written (Milanov, MPIA)
         """
@@ -491,7 +493,7 @@ class MGE_potential:
 
     def r_guide_root(self,r,x,y,z,vx,vy,vz):
         L=self.angularmom(x,y,z,vx,vy,vz)[0] 
-        a=np.min(self._r_bin)
-        b=np.max(self._r_bin)
+        a=np.min(self._sigma)
+        b=np.max(self._sigma)
         rg_r=opt.brentq(self._r_guide_aux,a=a,b=b,args=(L))
         return rg_r
