@@ -292,36 +292,36 @@ class MGE_orbit:
             r_mi=r
             rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
 
-        if np.sign(self._periapocenter_aux(r,E,L)) == np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
-            if np.sign(self._periapocenter_aux(r_sqrt,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)): 
+        if np.sign(self._periapocenter_aux(r,E,L)) == np.sign(self._periapocenter_aux(np.max(self._sigma),E,L)):
+            if np.sign(self._periapocenter_aux(r_sqrt,E,L)) != np.sign(self._periapocenter_aux(np.max(self._sigma),E,L)): 
                 r_ma=r_sqrt
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
-            elif np.sign(self._periapocenter_aux(r*1.000001,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*1.000001,E,L)) != np.sign(self._periapocenter_aux(np.max(self._sigma),E,L)):
                 r_ma=r*1.000001
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
-            elif np.sign(self._periapocenter_aux(r*0.99999,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*0.99999,E,L)) != np.sign(self._periapocenter_aux(np.max(self._sigma),E,L)):
                 r_ma=r*0.99999
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
-            elif np.sign(self._periapocenter_aux(r*1.00001,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*1.00001,E,L)) != np.sign(self._periapocenter_aux(np.max(self._sigma),E,L)):
                 r_ma=r*1.00001
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
-            elif np.sign(self._periapocenter_aux(r*0.9999,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*0.9999,E,L)) != np.sign(self._periapocenter_aux(np.max(self._sigma),E,L)):
                 r_ma=r*0.9999
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
-            elif np.sign(self._periapocenter_aux(r*1.0001,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*1.0001,E,L)) != np.sign(self._periapocenter_aux(np.max(self._sigma),E,L)):
                 r_ma=r*1.0001
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
-            elif np.sign(self._periapocenter_aux(r*0.999,E,L)) != np.sign(self._periapocenter_aux(np.max(self._r_bin),E,L)):
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
+            elif np.sign(self._periapocenter_aux(r*0.999,E,L)) != np.sign(self._periapocenter_aux(np.max(self._sigma),E,L)):
                 r_ma=r*0.999
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
             else:
                 r_ma=r
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin)*2.,args=(E,L)) #[pc] 
+                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma)*2.,args=(E,L)) #[pc] 
         else:
             r_ma=r
-            rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
+            rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
         #rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
-        #rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._r_bin),args=(E,L)) #[pc] 
+        #rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
 
         #if rmin == rmax:
          #   if rmin <= 1.01* r and rmin >= 0.99*r and rmax <= 1.01* r and rmax >= 0.99*r: #checks if orbit is circular
@@ -493,7 +493,7 @@ class MGE_orbit:
 
     def r_guide_root(self,r,x,y,z,vx,vy,vz):
         L=self.angularmom(x,y,z,vx,vy,vz)[0] 
-        a=np.min(self._r_bin)
-        b=np.max(self._r_bin)
+        a=np.min(self._sigma)
+        b=np.max(self._sigma)
         rg_r=opt.brentq(self._r_guide_aux,a=a,b=b,args=(L))
         return rg_r
