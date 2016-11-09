@@ -23,11 +23,14 @@ class MGE_orbit:
         HISTORY:
             2016-08-22 - Written (Milanov, MPIA)
             2016-08-23 - M_BH added (Milanov, MPIA)
+            2016-11-09 - Sources to check units added (Milanov, MPIA)
         """
         if inputfilename is not None:
             data = np.loadtxt(inputfilename)        
             self._counts = data[0,:]     #[M_sun / pc^2]
             self._sigma = data[1,:]     #[pc]
+            # For [counts] see Cappelari mge_fit_1d documentation in "Example"
+            # For [sigma] see Cappellari mge_fit_1d documentation in "Optional Output Keywords" part 2
         elif counts is None or sigma is None:
             sys.exit("Error in MGE_potential.__init__(): Specify input file or counts and sigma.")
         else:
@@ -36,8 +39,10 @@ class MGE_orbit:
 
         self._G = (un.m ** 3 / (un.kg * un.s ** 2)).to(un.pc ** 3/(un.solMass * un.s ** 2), cs.G) #[pc^3 / M_sun * s^2]
         self._mass = self._counts * 2. * cs.pi * self._sigma ** 2 #[M_sun]
+        # For [mass] and the formula see ... ASK WILMA
         self._bhmass = M_BH #[M_sun]
-        self._counts3d = self._counts / (np.sqrt(2. * cs.pi) * self._sigma) #[M_sun / pc^3]
+        self._counts3d = self._counts / (np.sqrt(2. * cs.pi) * self._sigma) #[M_sun / pc^3] 
+        # For [counts3d] at the formula see Cappellari mge_fit_1d documentation in "Optional Output Keywords" part 1
         return None
 
     def _H_j(self, u, R):
