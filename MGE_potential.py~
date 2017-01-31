@@ -293,6 +293,9 @@ class MGE_orbit:
             elif np.sign(self._periapocenter_aux(r*0.999,E,L)) != np.sign(self._periapocenter_aux(1e-7,E,L)):
                 r_mi=r*0.999
                 rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
+            else: 
+            	 rmin=r
+                print("pericenter error at r = " + str(r))
         else:
             r_mi=r
             rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
@@ -320,8 +323,8 @@ class MGE_orbit:
                 r_ma=r*0.999
                 rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
             else:
-                r_ma=r
-                rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma)*2.,args=(E,L)) #[pc] 
+                rmax=r
+                print("apocenter error at r = " + str(r))                
         else:
             r_ma=r
             rmax=opt.brentq(self._periapocenter_aux,r_ma,np.max(self._sigma),args=(E,L)) #[pc] 
