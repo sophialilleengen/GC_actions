@@ -217,7 +217,7 @@ class MGE_orbit:
             vx,vy,vz = arrays of velocities in x, y and z - direction in km/s  
         OUTPUT:
             energy at star position in pc^2/s^2
-        HISTORY:
+        HISTORY	   :
             2016-01-14 - Written (Milanov, MPIA)
         """  
         vx_pcs=(un.km/un.s).to((un.pc/un.s),vx) #[pc/s]
@@ -421,8 +421,12 @@ class MGE_orbit:
         rmin,rmax=self.periapocenter(r,x,y,z,vx,vy,vz)        
         E=self.energy(x,y,z,vx,vy,vz)   #[pc^2/s^2]
         L=self.angularmom(x,y,z,vx,vy,vz)[0]    #[pc^2/s]
-        J_r=1/np.pi*intg.quad(self._j_rint,rmin,rmax,args=(E,L))[0] #[pc^2/s]
-        J_r_pckms=(un.pc**2/un.s).to(un.pc*un.km/un.s,J_r) #[pc*km/s]
+        if rmin == rmax:
+            J_r = 0
+            J_r_pckms = 0 
+        else:
+            J_r=1/np.pi*intg.quad(self._j_rint,rmin,rmax,args=(E,L))[0] #[pc^2/s]
+            J_r_pckms=(un.pc**2/un.s).to(un.pc*un.km/un.s,J_r) #[pc*km/s]
         return J_r_pckms,rmin,rmax
     
     def actions(self,r,x,y,z,vx,vy,vz):

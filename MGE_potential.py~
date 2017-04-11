@@ -294,7 +294,7 @@ class MGE_orbit:
                 r_mi=r*0.999
                 rmin=opt.brentq(self._periapocenter_aux,1e-7,r_mi,args=(E,L)) #[pc] 
             else: 
-            	 rmin=r
+                rmin=r
                 print("pericenter error at r = " + str(r))
         else:
             r_mi=r
@@ -421,8 +421,12 @@ class MGE_orbit:
         rmin,rmax=self.periapocenter(r,x,y,z,vx,vy,vz)        
         E=self.energy(x,y,z,vx,vy,vz)   #[pc^2/s^2]
         L=self.angularmom(x,y,z,vx,vy,vz)[0]    #[pc^2/s]
-        J_r=1/np.pi*intg.quad(self._j_rint,rmin,rmax,args=(E,L))[0] #[pc^2/s]
-        J_r_pckms=(un.pc**2/un.s).to(un.pc*un.km/un.s,J_r) #[pc*km/s]
+        if rmin==rmax:
+            J_r =0
+        	   J_r_pckms=0 
+        else:
+            J_r=1/np.pi*intg.quad(self._j_rint,rmin,rmax,args=(E,L))[0] #[pc^2/s]
+            J_r_pckms=(un.pc**2/un.s).to(un.pc*un.km/un.s,J_r) #[pc*km/s]
         return J_r_pckms,rmin,rmax
     
     def actions(self,r,x,y,z,vx,vy,vz):
